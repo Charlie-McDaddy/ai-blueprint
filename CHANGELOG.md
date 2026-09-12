@@ -12,6 +12,12 @@ published `create-ai-blueprint` package.
   dependencies, services, configuration, and specialized security machinery
   now require a current need, reducing unnecessary generated code and repeated
   context while preserving real trust and data-integrity boundaries.
+- Let `npx create-ai-blueprint@latest update` change the installed adapters.
+  Interactive updates show the adapter checkbox pre-filled with the installed
+  set, adapter flags such as `update --codex` add an adapter without a prompt,
+  and removed adapters follow the normal conflict and backup rules. Adding
+  Claude Code creates `CLAUDE.md` only when it is missing, and removing it never
+  deletes the file.
 
 ### Fixed
 

@@ -15,6 +15,7 @@ import {
   isGlobalCliInstallConfirmed,
   parseArgs,
   resolveAdapters,
+  resolveUpdateAdapters,
   selectGlobalCliAction,
   shouldOfferGlobalCliInstall
 } from "../bin/create-ai-blueprint.js";
@@ -25,6 +26,7 @@ import {
   applyPreparedUpdate,
   findStaleClaudeImports,
   prepareUpdate,
+  readInstalledAdapters,
   readManifest,
   writeInstallManifest
 } from "../lib/update.js";
@@ -63,10 +65,13 @@ test("parseArgs supports install and update modes", () => {
     version: false,
     yes: false
   });
-  assert.throws(
-    () => parseArgs(["update", "--codex"]),
-    /Update detects the installed adapters/
-  );
+  assert.deepEqual(parseArgs(["update", "--codex"]).adapters, ["codex"]);
+  assert.deepEqual(parseArgs(["update", "--all"]).adapters, [
+    "codex",
+    "claude",
+    "copilot",
+    "opencode"
+  ]);
   assert.deepEqual(parseArgs(["dashboard", "--no-open", "--target", "./app"]), {
     adapters: null,
     command: "dashboard",
@@ -189,6 +194,48 @@ test("interactive installs default to Claude Code and Codex", async () => {
       { name: "Claude Code", value: "claude", checked: true },
       { name: "GitHub Copilot", value: "copilot", checked: false },
       { name: "OpenCode", value: "opencode", checked: false }
+    ],
+    required: true
+  });
+});
+
+test("update adapter flags add to the installed set and the prompt starts from it", async () => {
+  assert.deepEqual(
+    await resolveUpdateAdapters(parseArgs(["update", "--codex"]), ["claude"]),
+    ["claude", "codex"]
+  );
+  assert.deepEqual(
+    await resolveUpdateAdapters(parseArgs(["update", "--claude"]), ["claude", "codex"]),
+    ["claude", "codex"]
+  );
+  assert.deepEqual(
+    await resolveUpdateAdapters(parseArgs(["update", "--yes"]), ["claude"], undefined, true),
+    ["claude"]
+  );
+  assert.deepEqual(
+    await resolveUpdateAdapters(parseArgs(["update"]), ["copilot"], undefined, false),
+    ["copilot"]
+  );
+
+  let receivedConfig: unknown = null;
+  const selected = await resolveUpdateAdapters(
+    parseArgs(["update"]),
+    ["claude", "opencode"],
+    async (config) => {
+      receivedConfig = config;
+      return ["codex", "opencode"];
+    },
+    true
+  );
+
+  assert.deepEqual(selected, ["codex", "opencode"]);
+  assert.deepEqual(receivedConfig, {
+    message: "Select AI tool adapters",
+    choices: [
+      { name: "Codex", value: "codex", checked: false },
+      { name: "Claude Code", value: "claude", checked: true },
+      { name: "GitHub Copilot", value: "copilot", checked: false },
+      { name: "OpenCode", value: "opencode", checked: true }
     ],
     required: true
   });
@@ -899,6 +946,476 @@ test("formatMissingTemplateMessage names the directory it searched", () => {
   assert.ok(message.includes(searched));
   assert.match(message, /npm run link:local/);
   assert.match(message, /npm run prepare-template/);
+});
+
+const adapterChangeTemplate = {
+  "CLAUDE.md": "# Project\n\n@AGENTS.md\n",
+  ".agents/skills/check/SKILL.md": "Check skill\n",
+  ".agents/skills/feature/SKILL.md": "Feature skill\n",
+  ".claude/skills/check/SKILL.md": "Check skill\n",
+  ".claude/skills/feature/SKILL.md": "Feature skill\n"
+};
+
+test("update adds an adapter by installing its missing skill tree", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, {
+    "CLAUDE.md": "# Custom\n\n@AGENTS.md\n",
+    ".claude/skills/check/SKILL.md": "Check skill\n",
+    ".claude/skills/feature/SKILL.md": "Feature skill\n"
+  });
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["claude"]
+  });
+
+  assert.deepEqual(await readInstalledAdapters(targetDir), ["claude"]);
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "codex"]
+  });
+
+  assert.deepEqual(prepared.previousAdapters, ["claude"]);
+  assert.deepEqual(prepared.adapters, ["claude", "codex"]);
+  assert.deepEqual(prepared.addedAdapters, ["codex"]);
+  assert.deepEqual(prepared.removedAdapters, []);
+  assert.equal(prepared.claudeEntrypoint, null);
+  assert.deepEqual(
+    prepared.plan.add.map((operation) => operation.path),
+    [".agents/skills/check/SKILL.md", ".agents/skills/feature/SKILL.md"]
+  );
+  assert.equal(prepared.plan.remove.length, 0);
+  assert.equal(prepared.plan.conflicts.length, 0);
+
+  const result = await applyPreparedUpdate(prepared);
+
+  assert.equal(result.added, 2);
+  assert.equal(result.createdClaudeEntrypoint, false);
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".agents/skills/check/SKILL.md"), "utf8"),
+    "Check skill\n"
+  );
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".agents/skills/feature/SKILL.md"), "utf8"),
+    "Feature skill\n"
+  );
+  assert.equal(
+    await fs.readFile(path.join(targetDir, "CLAUDE.md"), "utf8"),
+    "# Custom\n\n@AGENTS.md\n"
+  );
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["claude", "codex"]);
+});
+
+test("update removes an adapter's skill tree and keeps CLAUDE.md", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+  const { "CLAUDE.md": claudeFile, ...skills } = adapterChangeTemplate;
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, { ...skills, "CLAUDE.md": claudeFile });
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["claude", "codex"]
+  });
+  await writeFiles(targetDir, {
+    ".claude/skills/feature/SKILL.md": "Locally customized feature skill\n"
+  });
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["codex"]
+  });
+
+  assert.deepEqual(prepared.addedAdapters, []);
+  assert.deepEqual(prepared.removedAdapters, ["claude"]);
+  assert.equal(prepared.claudeEntrypoint, null);
+  assert.equal(prepared.plan.add.length, 0);
+  assert.deepEqual(
+    prepared.plan.remove.map((operation) => operation.path),
+    [".claude/skills/check/SKILL.md"]
+  );
+  assert.deepEqual(
+    prepared.plan.conflicts.map((operation) => [operation.path, operation.operation, operation.reason]),
+    [[".claude/skills/feature/SKILL.md", "remove", "obsolete managed file was modified locally"]]
+  );
+  await assert.rejects(
+    applyPreparedUpdate(prepared),
+    /must be resolved or explicitly replaced/
+  );
+
+  const result = await applyPreparedUpdate(prepared, { replaceConflicts: true });
+
+  assert.equal(result.removed, 2);
+  assert.ok(result.backupDir);
+  assert.equal(
+    await fs.readFile(
+      path.join(result.backupDir, "files/.claude/skills/feature/SKILL.md"),
+      "utf8"
+    ),
+    "Locally customized feature skill\n"
+  );
+  await assert.rejects(fs.access(path.join(targetDir, ".claude")), { code: "ENOENT" });
+  assert.equal(await fs.readFile(path.join(targetDir, "CLAUDE.md"), "utf8"), claudeFile);
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".agents/skills/check/SKILL.md"), "utf8"),
+    "Check skill\n"
+  );
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["codex"]);
+});
+
+test("adding Claude Code creates CLAUDE.md only when it is missing", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+  const codexFiles = {
+    ".agents/skills/check/SKILL.md": "Check skill\n",
+    ".agents/skills/feature/SKILL.md": "Feature skill\n"
+  };
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, codexFiles);
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["codex"]
+  });
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "codex"]
+  });
+
+  assert.deepEqual(prepared.addedAdapters, ["claude"]);
+  assert.equal(prepared.claudeEntrypoint, "create");
+  assert.deepEqual(
+    prepared.plan.add.map((operation) => operation.path),
+    [".claude/skills/check/SKILL.md", ".claude/skills/feature/SKILL.md"]
+  );
+
+  const result = await applyPreparedUpdate(prepared);
+
+  assert.equal(result.createdClaudeEntrypoint, true);
+  assert.equal(
+    await fs.readFile(path.join(targetDir, "CLAUDE.md"), "utf8"),
+    adapterChangeTemplate["CLAUDE.md"]
+  );
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["claude", "codex"]);
+
+  const preservedTarget = path.join(workspace, "target-preserved");
+  const customClaudeFile = "# Custom\n\n@AGENTS.md\n";
+
+  await writeFiles(preservedTarget, { ...codexFiles, "CLAUDE.md": customClaudeFile });
+  await writeInstallManifest({
+    targetDir: preservedTarget,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["codex"]
+  });
+
+  const preservedPrepared = await prepareUpdate({
+    targetDir: preservedTarget,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "codex"]
+  });
+
+  assert.equal(preservedPrepared.claudeEntrypoint, "preserve");
+
+  const preservedResult = await applyPreparedUpdate(preservedPrepared);
+
+  assert.equal(preservedResult.createdClaudeEntrypoint, false);
+  assert.equal(
+    await fs.readFile(path.join(preservedTarget, "CLAUDE.md"), "utf8"),
+    customClaudeFile
+  );
+});
+
+test("OpenCode follows the Claude Code skill tree when adapters change", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, {
+    "CLAUDE.md": adapterChangeTemplate["CLAUDE.md"],
+    ".claude/skills/check/SKILL.md": "Check skill\n",
+    ".claude/skills/feature/SKILL.md": "Feature skill\n"
+  });
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["claude"]
+  });
+
+  const addOpenCode = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "opencode"]
+  });
+
+  assert.deepEqual(addOpenCode.addedAdapters, ["opencode"]);
+  assert.equal(addOpenCode.plan.add.length, 0);
+  assert.equal(addOpenCode.plan.remove.length, 0);
+
+  await applyPreparedUpdate(addOpenCode);
+
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["claude", "opencode"]);
+  await assert.rejects(fs.access(path.join(targetDir, ".agents")), { code: "ENOENT" });
+
+  const removeClaude = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["opencode"]
+  });
+
+  assert.deepEqual(removeClaude.removedAdapters, ["claude"]);
+  assert.deepEqual(
+    removeClaude.plan.add.map((operation) => operation.path),
+    [".agents/skills/check/SKILL.md", ".agents/skills/feature/SKILL.md"]
+  );
+  assert.deepEqual(
+    removeClaude.plan.remove.map((operation) => operation.path),
+    [".claude/skills/check/SKILL.md", ".claude/skills/feature/SKILL.md"]
+  );
+
+  await applyPreparedUpdate(removeClaude);
+
+  await assert.rejects(fs.access(path.join(targetDir, ".claude")), { code: "ENOENT" });
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".agents/skills/check/SKILL.md"), "utf8"),
+    "Check skill\n"
+  );
+  assert.equal(
+    await fs.readFile(path.join(targetDir, "CLAUDE.md"), "utf8"),
+    adapterChangeTemplate["CLAUDE.md"]
+  );
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["opencode"]);
+});
+
+test("legacy installs can add adapters but must update before removing one", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+  const { "CLAUDE.md": claudeFile, ...skills } = adapterChangeTemplate;
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, { ...skills, "CLAUDE.md": claudeFile });
+
+  assert.deepEqual(await readInstalledAdapters(targetDir), ["codex", "claude"]);
+  await assert.rejects(
+    prepareUpdate({ targetDir, templateRoot, version: "1.1.0", adapters: ["codex"] }),
+    /Run a plain `update` first/
+  );
+  await assert.rejects(
+    prepareUpdate({ targetDir, templateRoot, version: "1.1.0", adapters: [] }),
+    /Unknown or empty adapter selection/
+  );
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "codex", "copilot"]
+  });
+
+  assert.equal(prepared.previousVersion, "legacy");
+  assert.deepEqual(prepared.previousAdapters, ["codex", "claude"]);
+  assert.deepEqual(prepared.addedAdapters, ["copilot"]);
+  assert.deepEqual(prepared.removedAdapters, []);
+  assert.equal(prepared.plan.conflicts.length, 0);
+  assert.equal(prepared.plan.unchanged.length, 4);
+
+  await applyPreparedUpdate(prepared);
+
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["claude", "codex", "copilot"]);
+});
+
+test("failed adapter addition prunes the directories it created", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+  const codexFiles = {
+    ".agents/skills/check/SKILL.md": "Check skill\n",
+    ".agents/skills/feature/SKILL.md": "Feature skill\n"
+  };
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await fs.rm(path.join(templateRoot, "CLAUDE.md"));
+  await writeFiles(targetDir, codexFiles);
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "codex"]
+  });
+
+  assert.equal(prepared.previousVersion, "legacy");
+  assert.equal(prepared.claudeEntrypoint, "create");
+  await assert.rejects(
+    applyPreparedUpdate(prepared),
+    /Blueprint update failed and was rolled back/
+  );
+
+  await assert.rejects(fs.access(path.join(targetDir, ".claude")), { code: "ENOENT" });
+  await assert.rejects(fs.access(path.join(targetDir, "CLAUDE.md")), { code: "ENOENT" });
+  assert.equal(await readManifest(targetDir), null);
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".agents/skills/check/SKILL.md"), "utf8"),
+    codexFiles[".agents/skills/check/SKILL.md"]
+  );
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".agents/skills/feature/SKILL.md"), "utf8"),
+    codexFiles[".agents/skills/feature/SKILL.md"]
+  );
+});
+
+test("adding Claude Code moves the OpenCode skill tree to .claude", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, {
+    "CLAUDE.md": adapterChangeTemplate["CLAUDE.md"],
+    ".agents/skills/check/SKILL.md": "Check skill\n",
+    ".agents/skills/feature/SKILL.md": "Feature skill\n"
+  });
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["opencode"]
+  });
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "opencode"]
+  });
+
+  assert.deepEqual(prepared.addedAdapters, ["claude"]);
+  assert.deepEqual(prepared.removedAdapters, []);
+  assert.deepEqual(
+    prepared.plan.add.map((operation) => operation.path),
+    [".claude/skills/check/SKILL.md", ".claude/skills/feature/SKILL.md"]
+  );
+  assert.deepEqual(
+    prepared.plan.remove.map((operation) => operation.path),
+    [".agents/skills/check/SKILL.md", ".agents/skills/feature/SKILL.md"]
+  );
+
+  await applyPreparedUpdate(prepared);
+
+  await assert.rejects(fs.access(path.join(targetDir, ".agents")), { code: "ENOENT" });
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".claude/skills/check/SKILL.md"), "utf8"),
+    "Check skill\n"
+  );
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["claude", "opencode"]);
+});
+
+test("removing Claude Code keeps user-owned files under .claude", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, adapterChangeTemplate);
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["claude", "codex"]
+  });
+  await writeFiles(targetDir, {
+    ".claude/settings.json": "{}\n",
+    ".claude/skills/mine/SKILL.md": "My skill\n"
+  });
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["codex"]
+  });
+
+  assert.deepEqual(prepared.removedAdapters, ["claude"]);
+  assert.equal(prepared.plan.conflicts.length, 0);
+
+  await applyPreparedUpdate(prepared);
+
+  assert.equal(await fs.readFile(path.join(targetDir, ".claude/settings.json"), "utf8"), "{}\n");
+  assert.equal(
+    await fs.readFile(path.join(targetDir, ".claude/skills/mine/SKILL.md"), "utf8"),
+    "My skill\n"
+  );
+  assert.ok((await fs.stat(path.join(targetDir, ".claude/skills"))).isDirectory());
+  await assert.rejects(fs.access(path.join(targetDir, ".claude/skills/check")), {
+    code: "ENOENT"
+  });
+  await assert.rejects(fs.access(path.join(targetDir, ".claude/skills/feature")), {
+    code: "ENOENT"
+  });
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["codex"]);
+});
+
+test("adding Claude Code preserves a CLAUDE.md directory", async (t) => {
+  const workspace = await createWorkspace(t);
+  const templateRoot = path.join(workspace, "template");
+  const targetDir = path.join(workspace, "target");
+
+  await writeFiles(templateRoot, adapterChangeTemplate);
+  await writeFiles(targetDir, {
+    ".agents/skills/check/SKILL.md": "Check skill\n",
+    ".agents/skills/feature/SKILL.md": "Feature skill\n",
+    "CLAUDE.md/notes.md": "Not an entrypoint\n"
+  });
+  await writeInstallManifest({
+    targetDir,
+    templateRoot,
+    version: "1.0.0",
+    adapters: ["codex"]
+  });
+
+  const prepared = await prepareUpdate({
+    targetDir,
+    templateRoot,
+    version: "1.1.0",
+    adapters: ["claude", "codex"]
+  });
+
+  assert.equal(prepared.claudeEntrypoint, "preserve");
+
+  const result = await applyPreparedUpdate(prepared);
+
+  assert.equal(result.createdClaudeEntrypoint, false);
+  assert.ok((await fs.lstat(path.join(targetDir, "CLAUDE.md"))).isDirectory());
+  assert.equal(
+    await fs.readFile(path.join(targetDir, "CLAUDE.md/notes.md"), "utf8"),
+    "Not an entrypoint\n"
+  );
+  assert.deepEqual((await readManifest(targetDir))?.adapters, ["claude", "codex"]);
 });
 
 async function createWorkspace(t: TestContext): Promise<string> {

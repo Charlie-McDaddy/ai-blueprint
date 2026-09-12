@@ -363,6 +363,12 @@ npx create-ai-blueprint@latest update --dry-run
 npx create-ai-blueprint@latest update
 ```
 
+Update can also add an adapter to an existing installation:
+
+```bash
+npx create-ai-blueprint@latest update -- --codex
+```
+
 An optional global installation exposes the shorter `blueprint` command:
 
 ```bash

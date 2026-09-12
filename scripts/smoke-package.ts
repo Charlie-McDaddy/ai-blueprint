@@ -427,6 +427,46 @@ async function main(): Promise<void> {
       }
     }
 
+    const adapterChangeTarget = path.join(workspace, "target-adapter-change");
+    await fs.mkdir(adapterChangeTarget, { recursive: true });
+    run(
+      process.execPath,
+      [binary, "--target", adapterChangeTarget, "--claude", "--yes"],
+      workspace,
+      true
+    );
+    const addAdapterResult = run(
+      process.execPath,
+      [binary, "update", "--target", adapterChangeTarget, "--codex", "--yes"],
+      workspace,
+      true
+    );
+
+    if (
+      !addAdapterResult.stdout.includes("Adding adapters: codex") ||
+      !addAdapterResult.stdout.includes("Added adapters: codex")
+    ) {
+      throw new Error("update --codex did not report the added adapter");
+    }
+
+    await requirePath(path.join(adapterChangeTarget, ".agents", "skills"));
+    await requirePath(path.join(adapterChangeTarget, ".claude", "skills"));
+
+    const changedManifest = parseManifest(
+      await fs.readFile(
+        path.join(adapterChangeTarget, "blueprint", ".state", "manifest.json"),
+        "utf8"
+      )
+    );
+
+    if (JSON.stringify(changedManifest.adapters) !== JSON.stringify(["claude", "codex"])) {
+      throw new Error(
+        `update --codex recorded the wrong adapters: ${changedManifest.adapters.join(", ")}`
+      );
+    }
+
+    await validateInstall(adapterChangeTarget, metadata.version, ["claude", "codex"]);
+
     const emptyTarget = await fs.mkdtemp(
       path.join(os.tmpdir(), "ai-blueprint-empty-status-")
     );
@@ -463,7 +503,7 @@ async function main(): Promise<void> {
     }
 
     console.log(
-      "Packed installer passed for default, individual, combined, all, and legacy both adapter modes."
+      "Packed installer passed for default, individual, combined, all, and legacy both adapter modes, plus adding an adapter on update."
     );
   } finally {
     await fs.rm(workspace, { recursive: true, force: true });

@@ -62,6 +62,10 @@ interface PreparedUpdate {
   manifest: Manifest | null;
   desiredManifest: Manifest;
   adapters: Adapter[];
+  previousAdapters: Adapter[];
+  addedAdapters: Adapter[];
+  removedAdapters: Adapter[];
+  claudeEntrypoint: "create" | "preserve" | null;
   templateFiles: Map<string, TemplateFile>;
   plan: UpdatePlan;
   staleClaudeImports: string[];
@@ -78,6 +82,7 @@ interface UpdateResult {
   removed: number;
   unchanged: number;
   backupDir: string | null;
+  createdClaudeEntrypoint: boolean;
 }
 
 interface InstallManifestOptions {
@@ -93,6 +98,8 @@ const MANAGED_ROOTS = {
   claude: [".claude/skills"]
 } as const;
 const RETIRED_MANAGED_PATHS = new Set(["blueprint/README.md"]);
+const CLAUDE_ENTRYPOINT_PATH = "CLAUDE.md";
+const VALID_ADAPTERS: readonly Adapter[] = ["codex", "claude", "copilot", "opencode"];
 const STALE_CLAUDE_IMPORTS = [
   "@blueprint/context/project-overview.md",
   "@blueprint/context/current-feature.md",
@@ -220,7 +227,6 @@ async function readManifest(targetDir: string): Promise<Manifest | null> {
 }
 
 function validateManifest(manifest: unknown): asserts manifest is Manifest {
-  const validAdapters: readonly Adapter[] = ["codex", "claude", "copilot", "opencode"];
   const validManagedFiles =
     isRecord(manifest) &&
     isRecord(manifest.managedFiles) &&
@@ -234,7 +240,7 @@ function validateManifest(manifest: unknown): asserts manifest is Manifest {
     ? manifest.adapters
     : [];
   const adaptersAreValid = manifestAdapters.every(
-    (adapter): adapter is Adapter => validAdapters.includes(adapter as Adapter)
+    (adapter): adapter is Adapter => VALID_ADAPTERS.includes(adapter as Adapter)
   );
   const uniqueAdapters = new Set(manifestAdapters);
 
@@ -255,19 +261,26 @@ function validateManifest(manifest: unknown): asserts manifest is Manifest {
 async function prepareUpdate({
   targetDir,
   templateRoot,
-  version
+  version,
+  adapters: requestedAdapters
 }: {
   targetDir: string;
   templateRoot: string;
   version: string;
+  adapters?: readonly Adapter[];
 }): Promise<PreparedUpdate> {
   const realTargetDir = await fs.realpath(targetDir);
   const manifest = await readManifest(realTargetDir);
-  const adapters = await detectInstalledAdapters(realTargetDir, manifest);
+  const previousAdapters = await detectInstalledAdapters(realTargetDir, manifest);
+  const adapters = requestedAdapters
+    ? normalizeAdapters(requestedAdapters)
+    : [...previousAdapters];
+  const addedAdapters = adapters.filter((adapter) => !previousAdapters.includes(adapter));
+  const removedAdapters = previousAdapters.filter((adapter) => !adapters.includes(adapter));
 
-  if (adapters.length === 0) {
+  if (!manifest && removedAdapters.length > 0) {
     throw new Error(
-      "No installed Blueprint adapter skills were found in the target directory."
+      "This legacy installation has no manifest, so adapters cannot be removed safely. Run a plain `update` first to create the manifest, then change adapters."
     );
   }
 
@@ -326,6 +339,7 @@ async function prepareUpdate({
       if (
         templateFiles.has(relativePath) ||
         (!isManagedPath(relativePath, adapters) &&
+          !isManagedPath(relativePath, previousAdapters) &&
           !RETIRED_MANAGED_PATHS.has(relativePath))
       ) {
         continue;
@@ -357,6 +371,11 @@ async function prepareUpdate({
 
   sortPlan(plan);
   const staleClaudeImports = await findStaleClaudeImports(realTargetDir, adapters);
+  const claudeEntrypoint = addedAdapters.includes("claude")
+    ? (await getTargetFileState(realTargetDir, CLAUDE_ENTRYPOINT_PATH)).type === "missing"
+      ? "create"
+      : "preserve"
+    : null;
 
   return {
     targetDir: realTargetDir,
@@ -366,10 +385,24 @@ async function prepareUpdate({
     manifest,
     desiredManifest,
     adapters,
+    previousAdapters,
+    addedAdapters,
+    removedAdapters,
+    claudeEntrypoint,
     templateFiles,
     plan,
     staleClaudeImports
   };
+}
+
+function normalizeAdapters(adapters: readonly Adapter[]): Adapter[] {
+  const unknown = adapters.filter((adapter) => !VALID_ADAPTERS.includes(adapter));
+
+  if (adapters.length === 0 || unknown.length > 0) {
+    throw new Error(`Unknown or empty adapter selection: ${adapters.join(", ")}`);
+  }
+
+  return [...new Set(adapters)].sort();
 }
 
 async function findStaleClaudeImports(
@@ -431,6 +464,14 @@ async function applyPreparedUpdate(
     : null;
   const stagingDir = targetPath(prepared.targetDir, `${CONTROL_DIR}/staging/${identifier}`);
   const previousManifestFile = targetPath(prepared.targetDir, MANIFEST_PATH);
+  const claudeEntrypointFile = targetPath(prepared.targetDir, CLAUDE_ENTRYPOINT_PATH);
+  const removedRoots = managedRootsForAdapters(prepared.previousAdapters).filter(
+    (root) => !managedRootsForAdapters(prepared.adapters).includes(root)
+  );
+  const addedRoots = managedRootsForAdapters(prepared.adapters).filter(
+    (root) => !managedRootsForAdapters(prepared.previousAdapters).includes(root)
+  );
+  let createdClaudeEntrypoint = false;
 
   await assertPreparedTargetState(prepared);
   await assertNoSymlinkParents(
@@ -492,12 +533,32 @@ async function applyPreparedUpdate(
       await fs.rm(targetPath(prepared.targetDir, operation.path), { force: true });
     }
 
+    for (const root of removedRoots) {
+      await pruneRemovedRoot(prepared.targetDir, root);
+    }
+
+    if (prepared.claudeEntrypoint === "create") {
+      createdClaudeEntrypoint = true;
+      await atomicCopy(
+        path.join(prepared.templateRoot, CLAUDE_ENTRYPOINT_PATH),
+        claudeEntrypointFile
+      );
+    }
+
     await writeManifest(prepared.targetDir, prepared.desiredManifest);
     await writeControlIgnore(prepared.targetDir);
   } catch (error: unknown) {
     try {
       for (const operation of plan.add) {
         await fs.rm(targetPath(prepared.targetDir, operation.path), { force: true });
+      }
+
+      for (const root of addedRoots) {
+        await pruneRemovedRoot(prepared.targetDir, root);
+      }
+
+      if (createdClaudeEntrypoint) {
+        await fs.rm(claudeEntrypointFile, { force: true });
       }
 
       if (backupDir) {
@@ -528,8 +589,53 @@ async function applyPreparedUpdate(
     updated: replacements.length,
     removed: removals.length,
     unchanged: plan.unchanged.length,
-    backupDir
+    backupDir,
+    createdClaudeEntrypoint
   };
+}
+
+async function pruneRemovedRoot(targetDir: string, root: string): Promise<void> {
+  await assertNoSymlinkParents(targetDir, `${root}/placeholder`);
+
+  if (!(await pruneEmptyDirectories(targetPath(targetDir, root)))) {
+    return;
+  }
+
+  try {
+    await fs.rmdir(path.dirname(targetPath(targetDir, root)));
+  } catch (error: unknown) {
+    if (!["ENOENT", "ENOTEMPTY"].includes(getErrorCode(error) ?? "")) {
+      throw error;
+    }
+  }
+}
+
+async function pruneEmptyDirectories(directory: string): Promise<boolean> {
+  let entries;
+
+  try {
+    entries = await fs.readdir(directory, { withFileTypes: true });
+  } catch (error: unknown) {
+    if (getErrorCode(error) === "ENOENT") {
+      return true;
+    }
+
+    throw error;
+  }
+
+  let empty = true;
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !(await pruneEmptyDirectories(path.join(directory, entry.name)))) {
+      empty = false;
+    }
+  }
+
+  if (empty) {
+    await fs.rmdir(directory);
+  }
+
+  return empty;
 }
 
 async function writeInstallManifest({
@@ -543,6 +649,11 @@ async function writeInstallManifest({
   await writeManifest(targetDir, manifest);
   await writeControlIgnore(targetDir);
   return manifest;
+}
+
+async function readInstalledAdapters(targetDir: string): Promise<Adapter[]> {
+  const realTargetDir = await fs.realpath(targetDir);
+  return detectInstalledAdapters(realTargetDir, await readManifest(realTargetDir));
 }
 
 async function detectInstalledAdapters(
@@ -561,6 +672,12 @@ async function detectInstalledAdapters(
 
   if (await pathExists(targetPath(targetDir, ".claude/skills"))) {
     adapters.add("claude");
+  }
+
+  if (adapters.size === 0) {
+    throw new Error(
+      "No installed Blueprint adapter skills were found in the target directory."
+    );
   }
 
   return (["codex", "claude"] as const).filter((adapter) => adapters.has(adapter));
@@ -653,6 +770,15 @@ function sortPlan(plan: UpdatePlan): void {
 }
 
 async function assertPreparedTargetState(prepared: PreparedUpdate): Promise<void> {
+  if (
+    prepared.claudeEntrypoint === "create" &&
+    (await getTargetFileState(prepared.targetDir, CLAUDE_ENTRYPOINT_PATH)).type !== "missing"
+  ) {
+    throw new Error(
+      `${CLAUDE_ENTRYPOINT_PATH} appeared after the update plan was created. Re-run the update.`
+    );
+  }
+
   for (const operation of prepared.plan.add) {
     const current = await getTargetFileState(prepared.targetDir, operation.path);
 
@@ -796,6 +922,7 @@ export {
   findStaleClaudeImports,
   managedRootsForAdapters,
   prepareUpdate,
+  readInstalledAdapters,
   readManifest,
   writeInstallManifest
 };

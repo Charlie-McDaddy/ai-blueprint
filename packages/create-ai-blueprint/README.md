@@ -101,6 +101,7 @@ npx create-ai-blueprint@latest -- --all
 npx create-ai-blueprint@latest -- --both
 npx create-ai-blueprint@latest -- --force
 npx create-ai-blueprint@latest -- --target ./my-app
+npx create-ai-blueprint@latest update -- --codex
 ```
 
 The same flags work with `npm create ai-blueprint@latest -- ...`.
@@ -170,6 +171,18 @@ plans, context, history, references, and prototypes. An unchanged `blueprint/REA
 older version is removed during update; a locally modified copy keeps the normal
 conflict protection. The `blueprint/.state/manifest.json` file records the
 installed version and hashes of managed files.
+
+Update can also change the installed adapters. In an interactive terminal it
+shows the adapter checkbox pre-filled with the installed adapters, so you can
+check or uncheck tools before the plan is printed. `update --dry-run --yes`
+previews the plan without the adapter prompt. Adapter flags such as
+`update --codex` add adapters without a prompt and never remove an adapter.
+Removing an adapter is interactive only; its managed skill files follow the
+normal conflict and backup rules, and empty skill directories are pruned.
+OpenCode shares its skill tree, so adding or removing Claude Code can move it
+between `.agents/skills/` and `.claude/skills/`, and the plan says so. Adding
+Claude Code creates `CLAUDE.md` from the template only when the file is
+missing, and removing Claude Code never deletes it.
 
 `blueprint/config.json` is user-owned project policy. It controls review cadence,
 checkpoint availability, branch prefixes, verification strictness, independent-review execution, regular and

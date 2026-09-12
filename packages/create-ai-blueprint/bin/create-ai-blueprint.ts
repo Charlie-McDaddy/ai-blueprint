@@ -20,6 +20,7 @@ import {
   applyPreparedUpdate,
   managedRootsForAdapters,
   prepareUpdate,
+  readInstalledAdapters,
   writeInstallManifest
 } from "../lib/update.js";
 import type { Adapter, PreparedUpdate, UpdateResult } from "../lib/update.js";
@@ -141,11 +142,18 @@ async function runCli(
 
   const version = readPackageVersion();
 
+  if (options.deprecatedBoth) {
+    console.warn("Warning: --both is deprecated; use --all instead.");
+  }
+
   if (options.command === "update") {
+    const installedAdapters = await readInstalledAdapters(targetDir);
+    const adapters = await resolveUpdateAdapters(options, installedAdapters);
     const prepared = await prepareUpdate({
       targetDir,
       templateRoot,
-      version
+      version,
+      adapters
     });
     printUpdatePlan(prepared);
 
@@ -159,10 +167,6 @@ async function runCli(
     printUpdateSuccess(prepared, result);
     await offerGlobalCliInstall(options, version);
     return;
-  }
-
-  if (options.deprecatedBoth) {
-    console.warn("Warning: --both is deprecated; use --all instead.");
   }
 
   const adapters = await resolveAdapters(options);
@@ -322,12 +326,6 @@ function parseArgs(args: readonly string[]): CliOptions {
       ? ALL_ADAPTERS.filter((adapter) => adapterFlags.includes(adapter))
       : null;
 
-  if (options.command === "update" && options.adapters) {
-    throw new Error(
-      "Update detects the installed adapters. Do not pass adapter flags."
-    );
-  }
-
   if (options.command !== "status" && options.json) {
     throw new Error("--json is available only with the status command.");
   }
@@ -377,6 +375,32 @@ async function resolveAdapters(
       { name: "Claude Code", value: "claude", checked: true },
       { name: "GitHub Copilot", value: "copilot", checked: false },
       { name: "OpenCode", value: "opencode", checked: false }
+    ],
+    required: true
+  });
+}
+
+async function resolveUpdateAdapters(
+  options: CliOptions,
+  installed: readonly Adapter[],
+  prompt: AdapterCheckbox = checkbox as AdapterCheckbox,
+  isTTY: boolean | undefined = process.stdin.isTTY
+): Promise<Adapter[]> {
+  if (options.adapters) {
+    return [...new Set([...installed, ...options.adapters])].sort();
+  }
+
+  if (options.yes || !isTTY) {
+    return [...installed];
+  }
+
+  return prompt({
+    message: ADAPTER_PROMPT,
+    choices: [
+      { name: "Codex", value: "codex", checked: installed.includes("codex") },
+      { name: "Claude Code", value: "claude", checked: installed.includes("claude") },
+      { name: "GitHub Copilot", value: "copilot", checked: installed.includes("copilot") },
+      { name: "OpenCode", value: "opencode", checked: installed.includes("opencode") }
     ],
     required: true
   });
@@ -607,11 +631,51 @@ function printPlan(
   }
 }
 
+function getOpenCodeSkillsRoot(adapters: readonly Adapter[]): string {
+  return managedRootsForAdapters(adapters).includes(".claude/skills")
+    ? ".claude/skills"
+    : ".agents/skills";
+}
+
 function printUpdatePlan(prepared: PreparedUpdate): void {
   const { plan } = prepared;
   console.log("AI Blueprint update plan.");
   console.log(`Target: ${prepared.targetDir}`);
   console.log(`Adapters: ${prepared.adapters.join(", ")}`);
+
+  if (prepared.addedAdapters.length > 0) {
+    console.log(`Adding adapters: ${prepared.addedAdapters.join(", ")}`);
+  }
+
+  if (prepared.removedAdapters.length > 0) {
+    console.log(`Removing adapters: ${prepared.removedAdapters.join(", ")}`);
+  }
+
+  if (
+    prepared.previousAdapters.includes("opencode") &&
+    prepared.adapters.includes("opencode")
+  ) {
+    const previousRoot = getOpenCodeSkillsRoot(prepared.previousAdapters);
+    const nextRoot = getOpenCodeSkillsRoot(prepared.adapters);
+
+    if (
+      previousRoot !== nextRoot &&
+      !managedRootsForAdapters(prepared.adapters).includes(previousRoot)
+    ) {
+      console.log(`OpenCode skills move from ${previousRoot} to ${nextRoot}.`);
+    }
+  }
+
+  if (prepared.claudeEntrypoint === "create") {
+    console.log("CLAUDE.md is missing and will be created from the template.");
+  } else if (prepared.claudeEntrypoint === "preserve") {
+    console.log("The existing CLAUDE.md is kept as is; make sure it imports @AGENTS.md.");
+  }
+
+  if (prepared.removedAdapters.includes("claude")) {
+    console.log("CLAUDE.md is preserved; delete it manually if it is no longer needed.");
+  }
+
   console.log(`Version: ${prepared.previousVersion} -> ${prepared.version}`);
   console.log(`Add: ${plan.add.length}`);
   console.log(`Update: ${plan.update.length}`);
@@ -680,10 +744,23 @@ function printOnboardingNextSteps(adapters: readonly Adapter[]): void {
 function printUpdateSuccess(prepared: PreparedUpdate, result: UpdateResult): void {
   console.log("AI Blueprint updated.");
   console.log(`Version: ${prepared.previousVersion} -> ${prepared.version}`);
+
+  if (prepared.addedAdapters.length > 0) {
+    console.log(`Added adapters: ${prepared.addedAdapters.join(", ")}`);
+  }
+
+  if (prepared.removedAdapters.length > 0) {
+    console.log(`Removed adapters: ${prepared.removedAdapters.join(", ")}`);
+  }
+
   console.log(`Added: ${result.added}`);
   console.log(`Updated: ${result.updated}`);
   console.log(`Removed: ${result.removed}`);
   console.log(`Unchanged: ${result.unchanged}`);
+
+  if (result.createdClaudeEntrypoint) {
+    console.log("Created: CLAUDE.md");
+  }
 
   if (result.backupDir) {
     console.log(`Backup: ${path.relative(prepared.targetDir, result.backupDir)}`);
@@ -692,6 +769,7 @@ function printUpdateSuccess(prepared: PreparedUpdate, result: UpdateResult): voi
   console.log(
     "Preserved user-owned plans, context, history, references, prototypes, AGENTS.md, and CLAUDE.md."
   );
+  printClaudeRestartNote(prepared.addedAdapters);
 }
 
 function getNextCommand(adapters: readonly Adapter[]): string {
@@ -945,6 +1023,7 @@ Install AI Blueprint into an already scaffolded app.
 Usage:
   npx create-ai-blueprint@latest
   npx create-ai-blueprint@latest update
+  npx create-ai-blueprint@latest update -- --codex
   npx create-ai-blueprint@latest status
   npx create-ai-blueprint@latest status --json
   npx create-ai-blueprint@latest dashboard
@@ -957,10 +1036,10 @@ Usage:
   npx create-ai-blueprint@latest -- --both
 
 Options:
-  --codex          Add Codex to the adapter selection
-  --claude         Add Claude Code to the adapter selection
-  --copilot        Add GitHub Copilot to the adapter selection
-  --opencode       Add OpenCode to the adapter selection
+  --codex          Add Codex on install, or add it to the installed adapters on update
+  --claude         Add Claude Code on install, or add it to the installed adapters on update
+  --copilot        Add GitHub Copilot on install, or add it to the installed adapters on update
+  --opencode       Add OpenCode on install, or add it to the installed adapters on update
   --all            Install every supported adapter
   --both           Deprecated alias for --all
   --target, -t     Target directory, defaults to the current directory
@@ -1071,6 +1150,7 @@ export {
   isGlobalCliInstallConfirmed,
   parseArgs,
   resolveAdapters,
+  resolveUpdateAdapters,
   runCli,
   selectGlobalCliAction,
   shouldOfferGlobalCliInstall
