@@ -11,20 +11,23 @@ published `create-ai-blueprint` package.
   implementation, automated workflows, and audit. New abstractions,
   dependencies, services, configuration, and specialized security machinery
   now require a current need, reducing unnecessary generated code and repeated
-  context while preserving real trust and data-integrity boundaries.
+  context while preserving real trust and data-integrity boundaries,
+  contributed by [@akash07k](https://github.com/akash07k).
 - Let `npx create-ai-blueprint@latest update` change the installed adapters.
   Interactive updates show the adapter checkbox pre-filled with the installed
   set, adapter flags such as `update --codex` add an adapter without a prompt,
   and removed adapters follow the normal conflict and backup rules. Adding
   Claude Code creates `CLAUDE.md` only when it is missing, and removing it never
-  deletes the file.
+  deletes the file, requested by [@karai17](https://github.com/karai17).
 
 ### Fixed
 
 - Made `npm run link:local` safely repeatable by replacing its existing global
-  package registration before recreating the local link.
+  package registration before recreating the local link, contributed by
+  [@akash07k](https://github.com/akash07k).
 - Kept installers run from a linked source checkout from offering to replace the
-  local commands with the registry package.
+  local commands with the registry package, contributed by
+  [@akash07k](https://github.com/akash07k).
 
 ## [1.7.0] - 2026-09-11
 
