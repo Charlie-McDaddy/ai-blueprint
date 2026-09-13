@@ -169,6 +169,14 @@ async function runCli(
     return;
   }
 
+  const presentation =
+    process.stdin.isTTY === true &&
+    process.stdout.isTTY === true &&
+    process.env.TERM !== "dumb";
+  if (presentation && !options.dryRun) {
+    printInstallWelcome(version);
+  }
+
   const adapters = await resolveAdapters(options);
   const entries = getTemplateEntries(adapters);
   await validateInstallDestinations(entries, targetDir);
@@ -194,9 +202,9 @@ async function runCli(
     adapters
   });
 
-  printSuccess(targetDir, adapters, entries, existingEntries);
+  printSuccess(targetDir, adapters, entries, existingEntries, presentation);
   await offerGlobalCliInstall(options, version);
-  printOnboardingNextSteps(adapters);
+  printOnboardingNextSteps(adapters, presentation);
 }
 
 function parseArgs(args: readonly string[]): CliOptions {
@@ -707,16 +715,46 @@ function printUpdatePlan(prepared: PreparedUpdate): void {
   }
 }
 
+function styleInstall(value: string, code: string): string {
+  return shouldUseColor() ? `\u001b[${code}m${value}\u001b[0m` : value;
+}
+
+function printInstallWelcome(version: string): void {
+  const mark = [" ___  ___", "| _ )| _ \\", "| _ \\|  _/", "|___/|_|"];
+  const title = ["", "AI Blueprint", `v${version}`, ""];
+  const compact = (process.stdout.columns || 80) < 32;
+  console.log("");
+  for (const [index, line] of mark.entries()) {
+    const label = compact ? "" : styleInstall(title[index], "1");
+    console.log(`  ${styleInstall(line.padEnd(11), "36")}${label}`);
+  }
+  if (compact) {
+    console.log(`  ${styleInstall("AI Blueprint", "1")}`);
+    console.log(`  v${version}`);
+  }
+  console.log("");
+  console.log(compact ? "  An AI coding workflow." : "  A workflow for your AI coding tools.");
+  console.log("");
+}
+
 function printSuccess(
   targetDir: string,
   adapters: readonly Adapter[],
   entries: readonly TemplateEntry[],
-  existingEntries: readonly TemplateEntry[]
+  existingEntries: readonly TemplateEntry[],
+  presentation: boolean
 ): void {
-  console.log("AI Blueprint installed.");
+  if (presentation) {
+    console.log("");
+  }
+  console.log(
+    presentation
+      ? styleInstall("  + AI Blueprint installed.", "1;36")
+      : "AI Blueprint installed."
+  );
   console.log(`Target: ${targetDir}`);
   console.log(`Adapters: ${adapters.join(", ")}`);
-  console.log("Copied:");
+  console.log(presentation ? styleInstall("\nInstalled files", "1") : "Copied:");
 
   for (const entry of entries) {
     console.log(`- ${entry.target}`);
@@ -731,10 +769,24 @@ function printSuccess(
   console.log("Your app README was left alone.");
 }
 
-function printOnboardingNextSteps(adapters: readonly Adapter[]): void {
+function printOnboardingNextSteps(
+  adapters: readonly Adapter[],
+  presentation: boolean
+): void {
   console.log("");
-  console.log("Next: run onboard");
-  console.log(getNextCommand(adapters));
+  if (presentation) {
+    const rule = "-".repeat(Math.min(process.stdout.columns || 48, 48));
+    console.log(styleInstall(rule, "34"));
+    console.log(styleInstall("NEXT: AI chat command", "1;36"));
+    console.log("Open this project in your AI tool.");
+    console.log("Then send this in its chat:");
+    console.log("");
+    console.log(styleInstall(getNextCommand(adapters, true), "1"));
+    console.log(styleInstall(rule, "34"));
+  } else {
+    console.log("Next: run onboard");
+    console.log(getNextCommand(adapters));
+  }
   printClaudeRestartNote(adapters);
   console.log(
     "If a different skill loads, tell the agent to follow the local Blueprint skill file directly."
@@ -772,7 +824,7 @@ function printUpdateSuccess(prepared: PreparedUpdate, result: UpdateResult): voi
   printClaudeRestartNote(prepared.addedAdapters);
 }
 
-function getNextCommand(adapters: readonly Adapter[]): string {
+function getNextCommand(adapters: readonly Adapter[], includeLabels = false): string {
   const instructions: Record<Adapter, { label: string; command: string }> = {
     codex: { label: "Codex", command: "$onboard" },
     claude: { label: "Claude Code", command: "/onboard" },
@@ -789,7 +841,7 @@ function getNextCommand(adapters: readonly Adapter[]): string {
     .filter((adapter) => adapters.includes(adapter))
     .map((adapter) => instructions[adapter]);
 
-  if (selected.length === 1) {
+  if (selected.length === 1 && !includeLabels) {
     return selected[0].command;
   }
 
