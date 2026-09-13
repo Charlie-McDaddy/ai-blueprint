@@ -644,6 +644,13 @@ async function validateVerificationContract(): Promise<void> {
         "review.independentExecution",
         "Independent review defaults to `when-sensitive`",
         "defaults to\n     `automatic`",
+        "Accept equivalent guidance anywhere in the file; do not require exact prose",
+        "A heading or a single slogan is not sufficient",
+        "warning, not a setup blocker. The updater preserves existing `AGENTS.md`",
+        "merge only the missing guidance into the project's `AGENTS.md`",
+        "existing project rules and equivalent customized wording",
+        "keep `AGENTS.md` public-safe without adding hidden workflow paths or skill lists",
+        "Doctor must not edit or replace `AGENTS.md`",
         "Follow the proportional-engineering contract in `AGENTS.md`",
         "healthy\n     unknown context, not an incomplete requirement"
       ]

@@ -3,6 +3,15 @@
 Notable changes to AI Blueprint are documented here. Release dates reflect the
 published `create-ai-blueprint` package.
 
+## [Unreleased]
+
+### Fixed
+
+- Warn in `/doctor` when existing `AGENTS.md` lacks substantive
+  proportional-engineering guidance. Explain that updates preserve this file,
+  accept equivalent project wording, and give a manual repair that keeps
+  existing rules and local-only visibility intact.
+
 ## [1.8.0] - 2026-09-12
 
 ### Added
