@@ -11,6 +11,14 @@ published `create-ai-blueprint` package.
   AI skill invocations now explain the Codex and Claude Code chat commands, and
   unknown arguments point to the relevant help.
 
+### Changed
+
+- Consolidated browser test setup into `/tests browser` and `$tests browser`.
+  `/tests` defaults to unit setup, with `/tests unit` as an explicit form. Only
+  the selected setup reference is loaded. Removed the standalone browser-tests
+  skill; updates remove unchanged managed copies and flag customized copies as
+  conflicts. Update old command references in preserved project instructions.
+
 ### Fixed
 
 - Warn in `/doctor` when existing `AGENTS.md` lacks substantive

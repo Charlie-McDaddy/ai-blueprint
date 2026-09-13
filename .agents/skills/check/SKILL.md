@@ -64,7 +64,7 @@ type:
   command is declared but Playwright is already installed, prefer it for browser
   driving, screenshots, console errors, and failed request checks. Never install
   it from `/check`; use another real-browser evidence path and report what you
-  used, or point to `/browser-tests` for later optional setup.
+  used, or point to `/tests browser` for later optional setup.
 - **CLI** - run the actual command(s) with representative inputs.
 - **Server/API** - start it and hit the endpoints.
 - **Library** - exercise the public API through an example or the test command.

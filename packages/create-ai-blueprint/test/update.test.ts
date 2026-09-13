@@ -50,6 +50,18 @@ test("CLI recovery recognizes every shipped AI skill without reading a project",
   assert.equal(parseArgs(["status", "--target", "doctor"]).target, "doctor");
 });
 
+test("retired browser-tests CLI input points to consolidated AI chat commands", () => {
+  for (const surface of ["global", "package"] as const) {
+    assert.throws(() => parseArgs(["browser-tests"], surface), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /skill was removed/);
+      assert.ok(error.message.includes("`$tests browser` in Codex"));
+      assert.ok(error.message.includes("`/tests browser` in Claude Code"));
+      return true;
+    });
+  }
+});
+
 test("parseArgs supports install and update modes", () => {
   assert.equal(
     ADAPTER_PROMPT,
@@ -691,6 +703,68 @@ test("update removes only obsolete managed files that remain unchanged", async (
     "Retired skill\n"
   );
 });
+
+for (const customized of [false, true]) {
+  test(`consolidated test setup ${customized ? "preserves customized" : "removes unchanged"} retired skills in both adapters`, async (t) => {
+    const workspace = await createWorkspace(t);
+    const oldTemplateRoot = path.join(workspace, "template-old");
+    const newTemplateRoot = path.join(workspace, "template-new");
+    const targetDir = path.join(workspace, "target");
+    const oldFiles: Record<string, string> = { "AGENTS.md": "Project-owned instructions\n" };
+    const newFiles: Record<string, string> = {};
+    const retiredPaths: string[] = [];
+    for (const adapter of [".agents", ".claude"]) {
+      const retired = `${adapter}/skills/browser-tests/SKILL.md`;
+      retiredPaths.push(retired);
+      oldFiles[retired] = "Old browser setup\n";
+      oldFiles[`${adapter}/skills/tests/SKILL.md`] = "Old unit setup\n";
+      for (const file of ["SKILL.md", "reference/unit.md", "reference/browser.md"]) {
+        const relative = `${adapter}/skills/tests/${file}`;
+        newFiles[relative] = await fs.readFile(
+          new URL(`../../../${relative}`, import.meta.url), "utf8"
+        );
+      }
+    }
+    await writeFiles(oldTemplateRoot, oldFiles);
+    await writeFiles(targetDir, oldFiles);
+    await writeInstallManifest({
+      targetDir, templateRoot: oldTemplateRoot, version: "1.0.0", adapters: ["codex", "claude"]
+    });
+    if (customized) {
+      await writeFiles(targetDir, Object.fromEntries(
+        retiredPaths.map((relative) => [relative, "Customized browser setup\n"])
+      ));
+    }
+    await writeFiles(newTemplateRoot, newFiles);
+    const prepared = await prepareUpdate({
+      targetDir, templateRoot: newTemplateRoot, version: "1.1.0"
+    });
+    if (customized) {
+      assert.deepEqual(
+        prepared.plan.conflicts.map(({ path: file, operation, reason }) => [file, operation, reason]),
+        retiredPaths.map((file) => [file, "remove", "obsolete managed file was modified locally"])
+      );
+      await assert.rejects(applyPreparedUpdate(prepared), /must be resolved or explicitly replaced/);
+      for (const relative of retiredPaths) {
+        assert.equal(await fs.readFile(path.join(targetDir, relative), "utf8"), "Customized browser setup\n");
+      }
+      assert.equal(await fs.readFile(path.join(targetDir, ".agents/skills/tests/SKILL.md"), "utf8"), "Old unit setup\n");
+    } else {
+      assert.equal(prepared.plan.conflicts.length, 0);
+      assert.deepEqual(prepared.plan.remove.map(({ path: file }) => file), retiredPaths);
+      const result = await applyPreparedUpdate(prepared);
+      assert.ok(result.backupDir);
+      for (const relative of retiredPaths) {
+        await assert.rejects(fs.access(path.join(targetDir, relative)), { code: "ENOENT" });
+        assert.equal(await fs.readFile(path.join(result.backupDir, "files", relative), "utf8"), oldFiles[relative]);
+      }
+      for (const [relative, content] of Object.entries(newFiles)) {
+        assert.equal(await fs.readFile(path.join(targetDir, relative), "utf8"), content);
+      }
+    }
+    assert.equal(await fs.readFile(path.join(targetDir, "AGENTS.md"), "utf8"), oldFiles["AGENTS.md"]);
+  });
+}
 
 test("update removes an unchanged Blueprint README installed by an older version", async (t) => {
   const workspace = await createWorkspace(t);

@@ -134,7 +134,7 @@ time-dependent logic; a Python app would use pytest; a Go app `go test`.
 For UI and integration behavior, prefer real browser evidence over reading the
 code and assuming it works.
 
-- Browser automation is separately opt-in through `/browser-tests`. That setup
+- Browser automation is separately opt-in through `/tests browser`. That setup
   reuses a compatible runner or prefers Playwright for supported projects, then
   documents the exact command as `Browser tests` in `AGENTS.md`.
 - When `Browser tests` is declared, add focused coverage for stable behavioral

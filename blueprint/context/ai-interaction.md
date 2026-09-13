@@ -69,7 +69,7 @@ when you just want something done.
    adds logic must ship a passing test when the test gate is on. When `AGENTS.md`
    declares `Browser tests`, stable browser behavior can include focused harness
    coverage, while remaining UI and integration claims ride on direct browser,
-   screenshot, API, and build evidence. Run `/tests` or `/browser-tests`
+   screenshot, API, and build evidence. Run `/tests` or `/tests browser`
    explicitly rather than adding a missing runner mid-feature. See the Testing
    section of `coding-standards.md` for the gates.
    Run `/ci` separately when you want one Verify command and matching automatic

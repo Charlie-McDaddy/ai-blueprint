@@ -408,6 +408,16 @@ async function validateVerificationContract(): Promise<void> {
     ],
     [
       ".agents/skills/tests/SKILL.md",
+      [
+        "reference/unit.md",
+        "reference/browser.md",
+        "Load only the selected reference",
+        "A runner name alone never selects browser setup",
+        "`tests` as the command"
+      ]
+    ],
+    [
+      ".agents/skills/tests/reference/unit.md",
       ["add the real test command", "never creates a GitHub workflow on its own"]
     ],
     [
@@ -421,12 +431,12 @@ async function validateVerificationContract(): Promise<void> {
       ]
     ],
     [
-      ".agents/skills/browser-tests/SKILL.md",
+      ".agents/skills/tests/reference/browser.md",
       [
         "Browser tests: <command>",
         "Do not add browser tests to the default Verify command",
         "Continuous needs no separate browser mode",
-        "It does not replace live browser inspection"
+        "does not replace live browser inspection"
       ]
     ],
     [

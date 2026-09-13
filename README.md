@@ -181,7 +181,6 @@ full tour and command options.
 | **/audit** | Review a branch or project, record findings, or run independent review. |
 | **/autopilot** | Combine one spec and build pass through configured gates. |
 | **/brief** | Preview an upcoming feature without changing project state. |
-| **/browser-tests** | Add or normalize an optional repeatable browser harness. |
 | **/check** | Prove the current spec against the real application. |
 | **/ci** | Align one project Verify command with GitHub checks, plus an optional pre-push hook. |
 | **/complete** | Run final gates, archive the work, and request merge approval. |
@@ -198,7 +197,7 @@ full tour and command options.
 | **/release** | Prepare local Render or Vercel release configuration and checks. |
 | **/rollback** | Plan a history-preserving reversal of completed work. |
 | **/status** | Show progress, drift, blockers, and the suggested next action. |
-| **/tests** | Add or normalize stack-native unit testing. |
+| **/tests** | Set up unit testing, or an optional browser harness with `/tests browser`. |
 | **/try** | Generate a human manual-review walkthrough. |
 
 Codex uses the matching `$skill` form. Other adapters use the invocation style
@@ -338,8 +337,8 @@ Use only what the project needs:
 - `discovery` develops detailed plans through a reviewed conversation.
 - `doctor` checks Blueprint health without changing files.
 - `status` reports progress, drift, blockers, and the suggested next action.
-- `tests` adds or normalizes stack-native unit testing.
-- `browser-tests` adds an explicit repeatable browser harness.
+- `tests` or `tests unit` adds or normalizes stack-native unit testing.
+- `tests browser` adds an explicit repeatable browser harness.
 - `ci` aligns one project Verify command with GitHub checks and offers an optional pre-push hook.
 - `prototype` creates throwaway static mockups before the build loop.
 - `release` prepares local Render or Vercel configuration and readiness checks.
@@ -378,6 +377,16 @@ blueprint status
 
 Read [Updating Blueprint](https://ai-blueprint.dev/docs/updating-blueprint/) and
 [CLI Status](https://ai-blueprint.dev/docs/cli/status/) for details.
+
+### Test setup migration
+
+`/tests` and `/tests unit` set up unit testing. The standalone `/browser-tests`
+skill has been removed; use `/tests browser` (or `$tests browser` in Codex).
+Run the CLI update to install the consolidated skill and its references. Update
+removes unchanged managed copies of the old skill. Locally customized copies
+are reported as conflicts and preserved until you resolve or explicitly replace
+them. Existing `AGENTS.md` is preserved, so update any old command references in
+your project instructions too.
 
 ## Documentation
 

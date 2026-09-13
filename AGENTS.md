@@ -141,8 +141,7 @@ Core skills:
 - `feature` - turn a build-plan item into a spec, or propose a reviewed plan addition for a genuinely new feature
 - `debug` - reproduce and isolate a failure without editing code, then hand the evidence to `fix` or `implement`
 - `fix` - document an ad-hoc bug or change into `blueprint/context/current-feature.md`
-- `tests` - add or normalize unit testing and turn on the test gate
-- `browser-tests` - explicitly add or normalize a repeatable browser test harness and document its command
+- `tests` - set up unit testing by default, or a repeatable browser harness with `tests browser`
 - `ci` - explicitly set up one project-specific Verify command and matching automatic GitHub checks, with an optional local pre-push hook
 - `implement` - build the current spec one small, reviewed step at a time
 - `check` - prove the current spec against the running app
@@ -191,7 +190,7 @@ Git, and never part of a feature commit.
 Commands with meaningful progress or a durable handoff should write it when the
 state directory exists: `onboard`, `adopt`, `discovery`, `overview`, `feature`,
 `fix`, `rollback`, `implement`, `debug`, `check`, `audit`, `tests`,
-`browser-tests`, `ci`, `prototype`, `autopilot`, `continuous`, `complete`, and
+`ci`, `prototype`, `autopilot`, `continuous`, `complete`, and
 `release`. Short orientation commands such as `brief`, `try`, `status`, and
 `doctor` do not need activity state. Doctor's optional approved reset removes
 malformed activity instead of recording another run.
@@ -281,7 +280,7 @@ Testing is opt-in. If this project does not already have a unit test runner, run
 `/tests` or `$tests` to add one and update this section with the real test
 commands.
 
-Browser testing is also opt-in. Run `/browser-tests` or `$browser-tests` to add
+Browser testing is also opt-in. Run `/tests browser` or `$tests browser` to add
 or normalize a browser harness and document its exact command as `Browser
 tests`. Check and Continuous Mode can then reuse it without installing tooling
 mid-feature.

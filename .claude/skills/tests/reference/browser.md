@@ -1,15 +1,4 @@
----
-name: browser-tests
-description: Add or normalize a repository-owned browser test harness, reusing an existing runner or using Playwright when compatible. Use for /browser-tests, Playwright setup, end-to-end tests, or repeatable browser checks. Use check for one-time live verification.
----
-
-# browser-tests - set up repeatable browser verification
-
-**Context reuse:** Reuse any required file already loaded in project instructions or the current session. Read it again only if absent, changed, or exact current bytes or line references are needed.
-
-**First action:** Before project inspection, preflight, or any other tool call,
-publish `running` to `blueprint/.state/run.json` using the dashboard activity
-contract in `AGENTS.md`.
+# Browser test setup
 
 This is an explicit optional setup command. It creates a project-owned browser
 test path that later Feature, Implement, Check, and Continuous runs can reuse. It
@@ -18,8 +7,9 @@ command, or make browser testing mandatory for every Blueprint project.
 
 ## Input
 
-No argument is required. A named runner, browser, application surface, or flow is
-a preference to verify against the real project.
+This reference is selected by `/tests browser` or an explicit request to set up
+browser or end-to-end testing. A named runner, browser, application surface, or
+flow is a preference to verify against the real project.
 
 ## Step 1 - inspect the project
 

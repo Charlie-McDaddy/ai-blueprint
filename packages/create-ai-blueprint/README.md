@@ -134,7 +134,7 @@ them:
 - `/tests` or `$tests` establishes unit testing. The optional `/ci` or `$ci` skill
   defines one shared local and GitHub verification command from checks the
   project already has.
-- `/browser-tests` or `$browser-tests` explicitly adds or normalizes a repeatable
+- `/tests browser` or `$tests browser` explicitly adds or normalizes a repeatable
   browser harness, preferring an existing runner and otherwise using Playwright
   for compatible projects. Check and Continuous Mode reuse its documented
   command; installation never adds it automatically.
@@ -318,6 +318,13 @@ Accepting it installs or refreshes the CLI at the same version used by the npx
 command. Global installation exposes the shorter forms `blueprint status`,
 `blueprint status --json`, and `blueprint dashboard`. Use `--target ./my-app` to
 inspect an explicit project directory. Status never edits project or Git state.
+
+### Test setup migration
+
+The standalone `/browser-tests` skill has been removed. Use `/tests browser` or
+`$tests browser` instead; `/tests` and `/tests unit` remain unit setup. Updates
+remove unchanged managed copies of the old skill and stop for conflicts on
+customized copies. Review old references in your preserved `AGENTS.md` too.
 
 ## Opening the local dashboard
 

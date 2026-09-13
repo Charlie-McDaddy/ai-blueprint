@@ -31,7 +31,7 @@ const templateRoot = path.join(packageRoot, "template");
 const ADAPTER_PROMPT = "Select AI tool adapters";
 const ALL_ADAPTERS = adapterListFromMode("all");
 const AI_SKILLS = new Set([
-  "adopt", "audit", "autopilot", "brief", "browser-tests", "check", "ci",
+  "adopt", "audit", "autopilot", "brief", "check", "ci",
   "complete", "continuous", "debug", "discovery", "doctor", "feature", "fix",
   "implement", "onboard", "overview", "prototype", "release", "rollback",
   "status", "tests", "try"
@@ -324,6 +324,12 @@ function parseArgs(args: readonly string[], surface: CliSurface = "package"): Cl
     if (arg.startsWith("--target=")) {
       options.target = arg.slice("--target=".length);
       continue;
+    }
+
+    if (!commandSeen && arg === "browser-tests") {
+      throw new Error(
+        "The browser-tests skill was removed. Open your project in your AI chat and run `$tests browser` in Codex or `/tests browser` in Claude Code."
+      );
     }
 
     if (!commandSeen && AI_SKILLS.has(arg)) {
