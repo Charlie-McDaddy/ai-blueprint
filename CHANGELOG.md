@@ -7,6 +7,11 @@ published `create-ai-blueprint` package.
 
 ### Added
 
+- Added `/explore` and `$explore` for read-only discussion grounded in the actual
+  codebase. Compare options, including doing nothing, without requiring plans,
+  writing files or activity state, or executing code. Brief remains the preview
+  for an existing planned feature.
+
 - Show command-specific CLI help for status, dashboard, and update. Mistaken
   AI skill invocations now explain the Codex and Claude Code chat commands, and
   unknown arguments point to the relevant help.

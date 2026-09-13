@@ -28,6 +28,9 @@ Running `/onboard` never starts this skill. Empty plans never require it. A user
 who writes detailed plans manually, has another AI conversation, or arrives with
 finished plans continues directly to `/overview` exactly as before.
 
+For a focused idea or technical tradeoff without drafting plans, use `/explore`.
+Discovery develops the broader product plans.
+
 ## Step 1 - establish the starting point
 
 Read only the planning and project facts needed for the conversation:

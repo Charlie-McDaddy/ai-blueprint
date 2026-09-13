@@ -329,6 +329,18 @@ async function validateDashboardActivityContract(skills: readonly string[]): Pro
 async function validateVerificationContract(): Promise<void> {
   const requirements = new Map([
     [
+      ".agents/skills/explore/SKILL.md",
+      [
+        "No plans or active feature are required.",
+        "This command never writes activity state",
+        "Include doing nothing",
+        "Never install dependencies, execute product code, run tests or builds",
+        "Never create or switch branches",
+        "Do not invoke another command automatically.",
+        "There is no mandatory output template"
+      ]
+    ],
+    [
       ".agents/skills/onboard/SKILL.md",
       [
         "Run /ci or $ci when you want automatic GitHub checks.",

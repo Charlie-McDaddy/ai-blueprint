@@ -139,6 +139,7 @@ Core skills:
 - `overview` - distill the two planning docs into
   `blueprint/context/project-overview.md`, then offer a reviewed initial planning
   baseline commit before Feature 1
+- `explore` - investigate an idea against the actual code without writing files or requiring plans
 - `brief` - read-only briefing on an upcoming build-plan feature (scope, dependencies, size) before you spec it
 - `feature` - turn a build-plan item into a spec, or propose a reviewed plan addition for a genuinely new feature
 - `debug` - reproduce and isolate a failure without editing code, then hand the evidence to `fix` or `implement`
@@ -193,7 +194,7 @@ Commands with meaningful progress or a durable handoff should write it when the
 state directory exists: `onboard`, `adopt`, `discovery`, `overview`, `feature`,
 `fix`, `rollback`, `implement`, `debug`, `check`, `audit`, `tests`,
 `ci`, `prototype`, `autopilot`, `continuous`, `complete`, and
-`release`. Short orientation commands such as `brief`, `status`, and `doctor`
+`release`. Short orientation commands such as `explore`, `brief`, `status`, and `doctor`
 do not write activity state. The `check guide` mode also never writes activity
 state; select the Check mode before any activity call. Doctor's optional
 approved reset removes malformed activity instead of recording another run.

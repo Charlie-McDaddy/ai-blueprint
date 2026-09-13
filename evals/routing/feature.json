@@ -7,6 +7,7 @@
   ],
   "negative": [
     { "prompt": "Run /brief 4 and explain the feature before we spec it", "owner": "brief" },
-    { "prompt": "Run /fix for this unplanned greeting bug", "owner": "fix" }
+    { "prompt": "Run /fix for this unplanned greeting bug", "owner": "fix" },
+    { "prompt": "Explore an idea against the codebase and compare alternatives without writing files or a spec", "owner": "explore" }
   ]
 }

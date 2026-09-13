@@ -124,6 +124,8 @@ non-interactive runs.
 The core workflow stays focused. Use these capabilities when the project needs
 them:
 
+- `/explore <topic>` or `$explore <topic>` weighs an idea against the actual code,
+  including doing nothing. It needs no plans and never writes files or runs code.
 - `/brief` or `$brief` previews an upcoming build-plan feature before you spec
   it.
 - `/debug` or `$debug` investigates a failure without editing code.

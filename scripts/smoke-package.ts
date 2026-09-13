@@ -540,6 +540,7 @@ async function validateInstall(
       ".agents/skills/tests/reference/unit.md",
       ".agents/skills/tests/reference/browser.md",
       ".agents/skills/discovery/SKILL.md",
+      ".agents/skills/explore/SKILL.md",
       ".agents/skills/doctor/scripts/run-state.mjs",
       ".agents/skills/onboard/SKILL.md",
       ".agents/skills/rollback/SKILL.md"
@@ -556,6 +557,7 @@ async function validateInstall(
       ".claude/skills/tests/reference/unit.md",
       ".claude/skills/tests/reference/browser.md",
       ".claude/skills/discovery/SKILL.md",
+      ".claude/skills/explore/SKILL.md",
       ".claude/skills/doctor/scripts/run-state.mjs",
       ".claude/skills/onboard/SKILL.md",
       ".claude/skills/rollback/SKILL.md"

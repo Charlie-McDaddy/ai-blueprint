@@ -140,6 +140,10 @@ Each step has a narrow job:
 4. **Audit** reviews the complete branch delta and records actionable findings.
 5. **Complete** runs the final gates, archives the work, and asks before merge.
 
+The optional `/explore <topic>` weighs an idea against the actual code before
+planning work. It compares options, including doing nothing, without writing files or
+requiring plans. Use `/brief` to explain an existing planned feature instead.
+
 Other work enters the same control loop:
 
 - Use `fix` for a small unplanned change or confirmed bug.
@@ -188,6 +192,7 @@ full tour and command options.
 | **/debug** | Reproduce and isolate a failure without editing code. |
 | **/discovery** | Develop detailed plans through a reviewed conversation. |
 | **/doctor** | Check Blueprint health and offer to reset malformed generated dashboard state. |
+| **/explore** | Investigate an idea against the code without writing files or requiring plans. |
 | **/feature** | Turn one build-plan item into the active spec. |
 | **/fix** | Write the active spec for a small change or confirmed bug. |
 | **/implement** | Build the approved spec, then offer a code walkthrough. |

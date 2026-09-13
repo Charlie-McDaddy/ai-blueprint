@@ -7,6 +7,7 @@
   ],
   "negative": [
     { "prompt": "I already wrote detailed plans directly; run /overview now", "owner": "overview" },
-    { "prompt": "Run /onboard after I overlay Blueprint onto this new app", "owner": "onboard" }
+    { "prompt": "Run /onboard after I overlay Blueprint onto this new app", "owner": "onboard" },
+    { "prompt": "Explore an idea against the codebase and compare alternatives without writing files or a spec", "owner": "explore" }
   ]
 }

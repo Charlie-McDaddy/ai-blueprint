@@ -32,7 +32,7 @@ const ADAPTER_PROMPT = "Select AI tool adapters";
 const ALL_ADAPTERS = adapterListFromMode("all");
 const AI_SKILLS = new Set([
   "adopt", "audit", "autopilot", "brief", "check", "ci",
-  "complete", "continuous", "debug", "discovery", "doctor", "feature", "fix",
+  "complete", "continuous", "debug", "discovery", "doctor", "explore", "feature", "fix",
   "implement", "onboard", "overview", "prototype", "release", "rollback",
   "status", "tests"
 ]);
