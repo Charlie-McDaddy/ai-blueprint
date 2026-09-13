@@ -18,6 +18,12 @@ published `create-ai-blueprint` package.
 
 ### Changed
 
+- Reorganized the command guide around Feature, Implement, Check, Audit, and
+  Complete, with a task picker and all 22 skills grouped by purpose. Clarified
+  AI chat versus terminal commands, spec approval, verification versus manual
+  guides and code review, and the two retired-command replacements. Existing
+  gate defaults and permission boundaries remain unchanged.
+
 - Consolidated manual walkthroughs into `/check guide`, including `latest` and
   scoped guides. Guide mode stays read-only and never runs checks or records
   acceptance; default `/check` retains behavioral verification. Removed the Try

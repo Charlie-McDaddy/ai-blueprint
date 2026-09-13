@@ -52,8 +52,18 @@ for the rule for all AI tools and optional settings that reduce unwanted AI sign
 
 ## Core workflow
 
-Blueprint starts with your plans, then repeats one controlled loop for every
-feature or fix:
+Run installation and update commands in your terminal. Run workflow skills in
+your AI coding chat: `/feature` in Claude Code, `$feature` in Codex, or ask your
+agent to run the named skill. `blueprint feature` does not run the Feature skill.
+Use `npx create-ai-blueprint@latest status --help` for focused terminal help.
+
+Learn the feature loop:
+
+```text
+/feature -> /implement -> /check -> /audit current -> /complete
+```
+
+Blueprint starts with your plans:
 
 1. Run `/onboard` or `$onboard` to tune Blueprint to the real project.
 2. Write `blueprint/project-plan.md` and `blueprint/build-plan.md` directly, or
@@ -65,11 +75,17 @@ feature or fix:
    run, it offers a reviewed local commit for the Blueprint setup and plans.
 4. Run `/feature` or `$feature` for the next planned feature, or use the fix
    skill for a focused bug or small change.
-5. Review the spec, then run `/implement` or `$implement` to build it in small,
+5. Review and approve the spec, then run `/implement` or `$implement` to build it in small,
    visible steps.
 6. Run `/check` or `$check` to prove the behavior against the real app.
-7. Run `/complete` or `$complete` to archive the work and request merge
+7. Use `/audit current` or `$audit current` to review the implementation for
+   defects and record findings.
+8. Run `/complete` or `$complete` to archive the work and request merge
    approval.
+
+This teaching path does not change gate policy. Audit, Check, and manual-guide
+gates default to `manual`; independent review defaults to `when-sensitive`.
+Follow your configured gates; Audit is not mandatory for every feature.
 
 Plans, current work, verification evidence, findings, and completed history stay
 in the repository, so another session or supported coding tool can continue
@@ -119,35 +135,85 @@ Use `--force` to overwrite existing Blueprint files. Without `--force`, the
 installer asks before overwriting in an interactive terminal and exits in
 non-interactive runs.
 
-## Optional capabilities
+## What do you need?
 
-The core workflow stays focused. Use these capabilities when the project needs
-them:
+| What you want | Start here |
+| --- | --- |
+| "Would caching help this dashboard?" | `/explore would caching help our dashboard?` |
+| "Explain feature 5 before we spec it." | `/brief 5` |
+| "Build the next planned feature." | `/feature`, approve its spec, then `/implement` |
+| "Something is broken and I don't know why." | `/debug` |
+| "I know the bug or small change we need." | `/fix` |
+| "Show that this feature works." | `/check` |
+| "Tell me how to test it myself." | `/check guide` |
+| "Review the implementation for defects." | `/audit current` |
+| "Where did we leave off?" | `/status` |
+| "Is Blueprint set up correctly?" | `/doctor` |
 
-- `/explore <topic>` or `$explore <topic>` weighs an idea against the actual code,
-  including doing nothing. It needs no plans and never writes files or runs code.
-- `/brief` or `$brief` previews an upcoming build-plan feature before you spec
-  it.
-- `/debug` or `$debug` investigates a failure without editing code.
-- `/audit` and `/check guide`, or their Codex `$` forms, add code review and a human
-  walkthrough. `/audit independent current` prepares an approved checkpoint for
-  a selected fresh reviewer adapter and model, then records a staleness-checked
-  receipt.
-- `/tests` or `$tests` establishes unit testing. The optional `/ci` or `$ci` skill
-  defines one shared local and GitHub verification command from checks the
-  project already has.
-- `/tests browser` or `$tests browser` explicitly adds or normalizes a repeatable
-  browser harness, preferring an existing runner and otherwise using Playwright
-  for compatible projects. Check and Continuous Mode reuse its documented
-  command; installation never adds it automatically.
-- `/rollback` or `$rollback` plans a reviewed reversal from the archived spec
-  and exact feature commit without erasing history.
-- `/autopilot` or `$autopilot` runs one bounded feature or fix through its
-  configured gates, then stops before completion.
-- `/continuous` or `$continuous` processes the remaining reviewed build plan
-  serially with one local branch and commit per feature. It never pushes.
-- `/release` or `$release` prepares local Render or Vercel configuration and
-  release checks. It never deploys without separate approval.
+Explore investigates a possibility without requiring plans. Brief explains an
+item already in the build plan. Neither writes files; Explore never executes
+project code. Check exercises behavior against the spec. Check guide only gives
+you instructions: it never runs checks, writes activity state, records acceptance,
+or marks work verified. Audit reviews the code and
+records findings; a clean review does not prove the application works.
+
+## Command map
+
+All 22 skills are installed for each selected adapter. These groups organize the
+reference without adding configuration or optional installation modes. Use the
+matching `$` form in Codex.
+
+### Build
+
+| Skill | Purpose |
+| --- | --- |
+| **/feature** | Turn one build-plan item into a spec for your approval. |
+| **/implement** | Build the approved spec, then offer a code walkthrough. |
+| **/check** | Verify real behavior against the spec. Use `/check guide` for a read-only manual walkthrough, or `/check guide latest` for completed work. |
+| **/complete** | Run final gates, archive the work, and request merge approval. |
+
+### Understand and review
+
+| Skill | Purpose |
+| --- | --- |
+| **/explore** | Investigate an idea against the code without writing files or requiring plans. |
+| **/brief** | Explain an existing planned feature, its dependencies, and likely size without writing files. |
+| **/status** | Show progress, drift, blockers, and the suggested next action. |
+| **/debug** | Reproduce and isolate a failure without editing code. |
+| **/audit** | Review code and record findings; `/audit independent current` requests an independent review of a checkpoint. |
+| **/doctor** | Check Blueprint setup and workflow health; offer to reset malformed generated dashboard state after approval. |
+
+### Plan and set up
+
+| Skill | Purpose |
+| --- | --- |
+| **/onboard** | Tune a fresh Blueprint installation to the real project. |
+| **/adopt** | Bring Blueprint into an existing codebase with shipped behavior. |
+| **/discovery** | Develop the two planning documents through a reviewed conversation. |
+| **/overview** | Generate durable project context from both planning documents. |
+| **/prototype** | Create throwaway static mockups before implementation. |
+| **/tests** | Set up unit testing with `/tests` or `/tests unit`; explicitly set up a browser harness with `/tests browser`. |
+| **/ci** | Align one project Verify command with GitHub checks, plus an optional pre-push hook. |
+
+### Recover and release
+
+| Skill | Purpose |
+| --- | --- |
+| **/fix** | Write a spec for a small unplanned change or confirmed bug. |
+| **/rollback** | Plan a history-preserving reversal of completed work. |
+| **/release** | Prepare local Render or Vercel configuration and readiness checks; deployment needs separate approval. |
+
+### Automation
+
+| Skill | Purpose |
+| --- | --- |
+| **/autopilot** | Run one explicit spec and implementation pass through configured gates, stopping before completion. |
+| **/continuous** | Complete reviewed build-plan items serially with local Git work; never push or deploy. |
+
+The optional `/ci` or `$ci` skill uses the checks your project already has.
+Browser testing requires an explicit `/tests browser` request; ordinary `/tests`
+never installs it. See the [Command Guide](https://ai-blueprint.dev/docs/command-guide/)
+for the full reference.
 
 ## Updating an existing installation
 
@@ -321,25 +387,21 @@ command. Global installation exposes the shorter forms `blueprint status`,
 `blueprint status --json`, and `blueprint dashboard`. Use `--target ./my-app` to
 inspect an explicit project directory. Status never edits project or Git state.
 
-### Test setup migration
+### Command migration
 
-The standalone `/browser-tests` skill has been removed. Use `/tests browser` or
-`$tests browser` instead; `/tests` and `/tests unit` remain unit setup. Updates
-remove unchanged managed copies of the old skill and stop for conflicts on
-customized copies. Review old references in your preserved `AGENTS.md` too.
+Two standalone skills have been removed:
 
-### Manual guide migration
+| Old command | Replacement |
+| --- | --- |
+| `/browser-tests` | `/tests browser` (Codex: `$tests browser`) |
+| `/try` | `/check guide` (Codex: `$check guide`) |
 
-The standalone `/try` skill has been removed. Use `/check guide` or
-`$check guide` instead. Use `/check guide latest` for the most recent completed
-work, or add a step, path, route, or command to scope the walkthrough. Default
-`/check` still verifies behavior; guide mode only explains how you can test it
-and never runs checks, writes activity or spec status, or records acceptance.
-
-CLI updates remove unchanged managed Try copies and report customized copies
-as conflicts. Update old references in your preserved `AGENTS.md` too. The
-`qualityGates.regular.tryGuide` and `qualityGates.continuous.tryGuide` settings
-keep their names and existing policies; they now generate `/check guide`.
+Run the CLI update to install the consolidated skills. Updates remove unchanged
+managed copies of the retired skills and report customized copies as conflicts,
+preserving them until you resolve or explicitly replace them. Review old references in your preserved `AGENTS.md`; updates do not replace your
+project instructions. The `qualityGates.regular.tryGuide` and
+`qualityGates.continuous.tryGuide` keys keep their names and policies and now
+select `/check guide`. No configuration migration is needed.
 
 ## Opening the local dashboard
 

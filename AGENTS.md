@@ -130,40 +130,59 @@ trees.
 When changing shared workflow behavior, update the matching skill in both
 adapter folders so Codex, Claude Code, GitHub Copilot, and OpenCode stay aligned.
 
+Learn the feature loop: `/feature` -> `/implement` -> `/check` -> `/audit current` ->
+`/complete`. Approve the Feature spec before Implement. Check proves behavior;
+Audit reviews code and records findings. Showing both in this path does not
+change configured gates or make Audit mandatory. `/check guide` only generates
+manual instructions and never performs verification or records acceptance.
+
 Core skills:
 
-- `onboard` - tune commands, standards, visibility, ignore rules, and tool adapters after overlaying the Blueprint onto a freshly scaffolded or early project
-- `discovery` - optional deep, multi-turn planning conversation that drafts the two user-owned plans only after review and approval; direct plan writing remains fully supported
-- `doctor` - Blueprint health check for setup, adapters, plans, overview freshness, dashboard state, and workflow drift; it may offer to reset only malformed generated dashboard state after approval
-- `adopt` - bootstrap the Blueprint into an existing brownfield app with shipped features
-- `overview` - distill the two planning docs into
-  `blueprint/context/project-overview.md`, then offer a reviewed initial planning
-  baseline commit before Feature 1
-- `explore` - investigate an idea against the actual code without writing files or requiring plans
-- `brief` - read-only briefing on an upcoming build-plan feature (scope, dependencies, size) before you spec it
+### Build
+
 - `feature` - turn a build-plan item into a spec, or propose a reviewed plan addition for a genuinely new feature
-- `debug` - reproduce and isolate a failure without editing code, then hand the evidence to `fix` or `implement`
-- `fix` - document an ad-hoc bug or change into `blueprint/context/current-feature.md`
-- `tests` - set up unit testing by default, or a repeatable browser harness with `tests browser`
-- `ci` - explicitly set up one project-specific Verify command and matching automatic GitHub checks, with an optional local pre-push hook
 - `implement` - build the current spec one small, reviewed step at a time
 - `check` - prove the current spec against the running app, or use `check guide`
   for a read-only manual review guide: where to go, what to click, what to expect
-- `audit` - branch-aware or full-project review across all concerns or a focused quality, security, performance, or tests lens; `audit independent current` prepares an immutable checkpoint for a fresh reviewer session or configured isolated reviewer child; records findings in `blueprint/context/findings.md` and independent receipts in `blueprint/context/review.md`, where blocking findings or stale review state stop `complete`
-- `rollback` - plan a safe reversal of a completed feature from its archive and exact git commit, with later-dependency review before code changes
 - `complete` - run the final safety pass, log features, fixes, or rollbacks under `blueprint/history/`, then merge with approval
-- `release` - optional Render or Vercel deployment readiness, local config, env review, and smoke-test planning
-- `prototype` - optional, pre-build static mockups to lock the look
+
+### Understand and review
+
+- `explore` - investigate an idea against the actual code without writing files or requiring plans
+- `brief` - read-only briefing on an upcoming build-plan feature (scope, dependencies, size) before you spec it
 - `status` - read-only progress summary, workflow drift warning, and suggested next action
+- `debug` - reproduce and isolate a failure without editing code, then hand the evidence to `fix` or `implement`
+- `audit` - branch-aware or full-project review across all concerns or a focused quality, security, performance, or tests lens; `audit independent current` prepares an immutable checkpoint for a fresh reviewer session or configured isolated reviewer child; records findings in `blueprint/context/findings.md` and independent receipts in `blueprint/context/review.md`, where blocking findings or stale review state stop `complete`
+- `doctor` - Blueprint health check for setup, adapters, plans, overview freshness, dashboard state, and workflow drift; it may offer to reset only malformed generated dashboard state after approval
+
+### Plan and set up
+
+- `onboard` - tune commands, standards, visibility, ignore rules, and tool adapters after overlaying the Blueprint onto a freshly scaffolded or early project
+- `adopt` - bootstrap the Blueprint into an existing brownfield app with shipped features
+- `discovery` - optional deep, multi-turn planning conversation that drafts the two user-owned plans only after review and approval; direct plan writing remains fully supported
+- `overview` - distill the two planning docs into
+  `blueprint/context/project-overview.md`, then offer a reviewed initial planning
+  baseline commit before Feature 1
+- `prototype` - optional, pre-build static mockups to lock the look
+- `tests` - set up unit testing by default, or a repeatable browser harness with `tests browser`
+- `ci` - explicitly set up one project-specific Verify command and matching automatic GitHub checks, with an optional local pre-push hook
+
+### Recover and release
+
+- `fix` - document an ad-hoc bug or change into `blueprint/context/current-feature.md`
+- `rollback` - plan a safe reversal of a completed feature from its archive and exact git commit, with later-dependency review before code changes
+- `release` - optional Render or Vercel deployment readiness, local config, env review, and smoke-test planning
 
 In Codex, invoke these as skills (`$onboard`, `$discovery`, `$overview`, `$feature`,
 `$implement`, and so on) or ask naturally, such as "run the overview." In Claude
 Code, use the slash commands (`/onboard`, `/discovery`, `/overview`, `/feature`,
-and so on). In OpenCode or other tools without a dedicated invocation syntax,
-ask the agent to run the matching skill or follow its `SKILL.md` manually. The
+and so on). These are AI chat commands, not terminal commands. In OpenCode or
+other tools without a dedicated invocation syntax, ask the agent to run the matching skill or follow its `SKILL.md` manually. The
 conventions in `blueprint/context/` apply however a step is invoked. `/discovery`
 is never required: users may write detailed plans directly or develop them
 through any conversation before running `/overview`.
+
+### Automation
 
 Optional explicit-only skill: `autopilot` combines `feature` or `fix` with
 `implement` in one bounded pass when directly invoked, including the configured

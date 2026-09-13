@@ -101,7 +101,8 @@ Next:
 4. Run `feature` for the next planned item, review the generated spec, and then
    begin implementation.
 
-Use the invocation style for your tool:
+Run the `npx` commands above in your terminal. Run workflow skills such as
+`onboard` in your AI coding chat, using the invocation style for your tool:
 
 | Tool | Example |
 | --- | --- |
@@ -124,21 +125,27 @@ has shipped features, start with
 
 ## The workflow
 
-The normal feature loop is:
+Learn these five commands first:
 
 ```text
-feature -> review spec -> implement -> check -> audit current -> complete
+/feature -> /implement -> /check -> /audit current -> /complete
 ```
 
-![AI Blueprint fresh-project workflow](assets/ai-blueprint-workflow-v2.png)
+![AI Blueprint fresh-project workflow](assets/ai-blueprint-workflow.svg)
 
 Each step has a narrow job:
 
-1. **Feature** selects one build-plan item and writes its buildable spec.
+1. **Feature** selects one build-plan item and writes its buildable spec. Review
+   and approve that spec before implementation.
 2. **Implement** builds the approved spec in small, visible steps.
 3. **Check** proves the acceptance criteria against the running application.
 4. **Audit** reviews the complete branch delta and records actionable findings.
 5. **Complete** runs the final gates, archives the work, and asks before merge.
+
+This is a teaching path, not a new gate policy. Audit, Check, and manual-guide
+gates still default to `manual`; independent review defaults to `when-sensitive`.
+Run the checks and reviews your project requires. Showing Audit here does not
+make it mandatory for every feature.
 
 The optional `/explore <topic>` weighs an idea against the actual code before
 planning work. It compares options, including doing nothing, without writing files or
@@ -177,36 +184,87 @@ workflow commands.
 Read [Local Dashboard](https://ai-blueprint.dev/docs/cli/dashboard/) for the
 full tour and command options.
 
+## What do you need?
+
+| What you want | Start here |
+| --- | --- |
+| "Would caching help this dashboard?" | `/explore would caching help our dashboard?` |
+| "Explain feature 5 before we spec it." | `/brief 5` |
+| "Build the next planned feature." | `/feature`, approve its spec, then `/implement` |
+| "Something is broken and I don't know why." | `/debug` |
+| "I know the bug or small change we need." | `/fix` |
+| "Show that this feature works." | `/check` |
+| "Tell me how to test it myself." | `/check guide` |
+| "Review the implementation for defects." | `/audit current` |
+| "Where did we leave off?" | `/status` |
+| "Is Blueprint set up correctly?" | `/doctor` |
+
+Explore investigates a possibility without requiring plans. Brief explains an
+item already in the build plan. Neither writes files; Explore never executes
+project code. Check exercises behavior against the spec. Check guide only gives
+you instructions: it never runs checks, writes activity state, records acceptance,
+or marks work verified. Audit reviews the code and
+records findings; a clean review does not prove the application works.
+
 ## Command map
+
+All 22 skills are installed for each selected adapter. These groups help you
+find a command; they do not add installation modes or configuration. Examples
+use Claude Code slash commands in AI chat. Codex uses the matching `$skill` form,
+and other adapters can run the named skill through plain language.
+
+### Build
 
 | Skill | Purpose |
 | --- | --- |
-| **/adopt** | Bring Blueprint into an existing codebase with shipped behavior. |
-| **/audit** | Review a branch or project, record findings, or run independent review. |
-| **/autopilot** | Combine one spec and build pass through configured gates. |
-| **/brief** | Preview an upcoming feature without changing project state. |
-| **/check** | Verify real behavior, or generate a manual walkthrough with `/check guide`. |
-| **/ci** | Align one project Verify command with GitHub checks, plus an optional pre-push hook. |
-| **/complete** | Run final gates, archive the work, and request merge approval. |
-| **/continuous** | Complete reviewed build-plan items serially with local Git work. |
-| **/debug** | Reproduce and isolate a failure without editing code. |
-| **/discovery** | Develop detailed plans through a reviewed conversation. |
-| **/doctor** | Check Blueprint health and offer to reset malformed generated dashboard state. |
-| **/explore** | Investigate an idea against the code without writing files or requiring plans. |
-| **/feature** | Turn one build-plan item into the active spec. |
-| **/fix** | Write the active spec for a small change or confirmed bug. |
+| **/feature** | Turn one build-plan item into a spec for your approval. |
 | **/implement** | Build the approved spec, then offer a code walkthrough. |
-| **/onboard** | Tune a fresh Blueprint installation to the real project. |
-| **/overview** | Generate durable project context from both planning docs. |
-| **/prototype** | Create throwaway static mockups before implementation. |
-| **/release** | Prepare local Render or Vercel release configuration and checks. |
-| **/rollback** | Plan a history-preserving reversal of completed work. |
-| **/status** | Show progress, drift, blockers, and the suggested next action. |
-| **/tests** | Set up unit testing, or an optional browser harness with `/tests browser`. |
+| **/check** | Verify real behavior against the spec. Use `/check guide` for a read-only manual walkthrough, or `/check guide latest` for completed work. |
+| **/complete** | Run final gates, archive the work, and request merge approval. |
 
-Codex uses the matching `$skill` form. Other adapters use the invocation style
-shown during installation. Each command has a dedicated page in the
-[documentation](https://ai-blueprint.dev/docs/).
+### Understand and review
+
+| Skill | Purpose |
+| --- | --- |
+| **/explore** | Investigate an idea against the code without writing files or requiring plans. |
+| **/brief** | Explain an existing planned feature, its dependencies, and likely size without writing files. |
+| **/status** | Show progress, drift, blockers, and the suggested next action. |
+| **/debug** | Reproduce and isolate a failure without editing code. |
+| **/audit** | Review code and record findings; `/audit independent current` requests an independent review of a checkpoint. |
+| **/doctor** | Check Blueprint setup and workflow health; offer to reset malformed generated dashboard state after approval. |
+
+### Plan and set up
+
+| Skill | Purpose |
+| --- | --- |
+| **/onboard** | Tune a fresh Blueprint installation to the real project. |
+| **/adopt** | Bring Blueprint into an existing codebase with shipped behavior. |
+| **/discovery** | Develop the two planning documents through a reviewed conversation. |
+| **/overview** | Generate durable project context from both planning documents. |
+| **/prototype** | Create throwaway static mockups before implementation. |
+| **/tests** | Set up unit testing with `/tests` or `/tests unit`; explicitly set up a browser harness with `/tests browser`. |
+| **/ci** | Align one project Verify command with GitHub checks, plus an optional pre-push hook. |
+
+### Recover and release
+
+| Skill | Purpose |
+| --- | --- |
+| **/fix** | Write a spec for a small unplanned change or confirmed bug. |
+| **/rollback** | Plan a history-preserving reversal of completed work. |
+| **/release** | Prepare local Render or Vercel configuration and readiness checks; deployment needs separate approval. |
+
+### Automation
+
+| Skill | Purpose |
+| --- | --- |
+| **/autopilot** | Run one explicit spec and implementation pass through configured gates, stopping before completion. |
+| **/continuous** | Complete reviewed build-plan items serially with local Git work; never push or deploy. |
+
+See the [Command Guide](https://ai-blueprint.dev/docs/command-guide/) for the
+full reference. Terminal commands manage installation, updates, status, and the
+dashboard; they do not run these skills. For example, `blueprint doctor` explains
+how to invoke Doctor in chat. Use `npx create-ai-blueprint@latest status --help`
+for focused terminal help.
 
 ## File-backed project state
 
@@ -247,7 +305,7 @@ Blueprint separates several kinds of proof that are easy to blur together:
   tests, with focused lenses when needed.
 - **Independent Audit:** a fresh reviewer session or configured isolated
   reviewer child inspects an approved checkpoint using an exact adapter and model.
-- **Try guide:** `/check guide` generates a read-only manual walkthrough for human review.
+- **Check guide:** `/check guide` generates a read-only manual walkthrough for human review.
 
 Independent review records the target, permitted base, spec hash, requested and
 actual reviewer metadata, Check result, commands, evidence, findings, and
@@ -334,23 +392,6 @@ duplicating the same skills under `.opencode/skills/`.
 Read [Tool Adapters](https://ai-blueprint.dev/docs/tool-adapters/) for selection,
 invocation, and project-layout details.
 
-## Optional capabilities
-
-Use only what the project needs:
-
-- `discovery` develops detailed plans through a reviewed conversation.
-- `doctor` checks Blueprint health without changing files.
-- `status` reports progress, drift, blockers, and the suggested next action.
-- `tests` or `tests unit` adds or normalizes stack-native unit testing.
-- `tests browser` adds an explicit repeatable browser harness.
-- `ci` aligns one project Verify command with GitHub checks and offers an optional pre-push hook.
-- `prototype` creates throwaway static mockups before the build loop.
-- `release` prepares local Render or Vercel configuration and readiness checks.
-
-The [documentation](https://ai-blueprint.dev/docs/) has one page for every
-command, plus guides for testing, configuration, manual review, updating, and
-troubleshooting.
-
 ## Status and updates
 
 Check a Blueprint project without changing it:
@@ -382,34 +423,27 @@ blueprint status
 Read [Updating Blueprint](https://ai-blueprint.dev/docs/updating-blueprint/) and
 [CLI Status](https://ai-blueprint.dev/docs/cli/status/) for details.
 
-### Test setup migration
+### Command migration
 
-`/tests` and `/tests unit` set up unit testing. The standalone `/browser-tests`
-skill has been removed; use `/tests browser` (or `$tests browser` in Codex).
-Run the CLI update to install the consolidated skill and its references. Update
-removes unchanged managed copies of the old skill. Locally customized copies
-are reported as conflicts and preserved until you resolve or explicitly replace
-them. Existing `AGENTS.md` is preserved, so update any old command references in
-your project instructions too.
+Two standalone skills have been removed:
 
-### Manual guide migration
+| Old command | Replacement |
+| --- | --- |
+| `/browser-tests` | `/tests browser` (Codex: `$tests browser`) |
+| `/try` | `/check guide` (Codex: `$check guide`) |
 
-The standalone `/try` skill has been removed. Use `/check guide` or
-`$check guide` instead. Use `/check guide latest` for the most recent completed
-work, or add a step, path, route, or command to scope the walkthrough. Default
-`/check` still verifies behavior; guide mode only explains how you can test it
-and never runs checks, writes activity or spec status, or records acceptance.
-
-CLI updates remove unchanged managed Try copies and report customized copies
-as conflicts. Update old references in your preserved `AGENTS.md` too. The
-`qualityGates.regular.tryGuide` and `qualityGates.continuous.tryGuide` settings
-keep their names and existing policies; they now generate `/check guide`.
+Run the CLI update to install the consolidated skills. Updates remove unchanged
+managed copies of the retired skills and report customized copies as conflicts,
+preserving them until you resolve or explicitly replace them. Review old references in your preserved `AGENTS.md`; updates do not replace your
+project instructions. The `qualityGates.regular.tryGuide` and
+`qualityGates.continuous.tryGuide` keys keep their names and policies and now
+select `/check guide`. No configuration migration is needed.
 
 ## Documentation
 
 - [Getting Started](https://ai-blueprint.dev/docs/getting-started/)
 - [Core Workflow](https://ai-blueprint.dev/docs/core-workflow/)
-- [Command Reference](https://ai-blueprint.dev/docs/)
+- [Command Guide](https://ai-blueprint.dev/docs/command-guide/)
 - [Project Configuration](https://ai-blueprint.dev/docs/project-configuration/)
 - [Testing](https://ai-blueprint.dev/docs/testing/)
 - [Manual Review](https://ai-blueprint.dev/docs/manual-review/)

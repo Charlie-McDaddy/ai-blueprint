@@ -31,8 +31,17 @@ The loop we use for every feature. The spec for the feature being built lives in
 @blueprint/context/current-feature.md.
 
 Run `/feature` (or `/fix` for a bug or change that isn't a planned feature) to
-write the spec, `/implement` to build it on a branch, and `/complete` to log it
-and merge. The numbered loop below is what those skills follow.
+write the spec and approve it before `/implement` builds it on a branch. Use
+`/check` to prove behavior, `/audit` to review code and record findings, and
+`/complete` to log the work and merge with approval. This teaching path does not
+change the configured gates; Audit is not mandatory for every feature.
+`/check guide` only explains how the user can test the work and never runs checks
+or records acceptance. The numbered loop below is what those skills follow.
+
+Before planning, `/explore <topic>` investigates an idea against the actual code
+without requiring plans or writing files. `/brief` instead explains an existing
+build-plan item. Run these skills in AI chat, using the `$` form in Codex, not as
+terminal commands.
 
 After the first successful `/overview`, Blueprint offers a reviewed local commit
 for the initial workflow setup and plans before Feature 1. It shows the exact
