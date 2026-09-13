@@ -30,6 +30,12 @@ const packageRoot = findPackageRoot(__dirname);
 const templateRoot = path.join(packageRoot, "template");
 const ADAPTER_PROMPT = "Select AI tool adapters";
 const ALL_ADAPTERS = adapterListFromMode("all");
+const AI_SKILLS = new Set([
+  "adopt", "audit", "autopilot", "brief", "browser-tests", "check", "ci",
+  "complete", "continuous", "debug", "discovery", "doctor", "feature", "fix",
+  "implement", "onboard", "overview", "prototype", "release", "rollback",
+  "status", "tests", "try"
+]);
 
 interface AdapterCheckboxChoice {
   name: string;
@@ -66,22 +72,23 @@ interface TemplateEntry {
 }
 
 type GlobalCliAction = "install" | "update" | null;
+type CliSurface = "package" | "global";
 
 const adapterChoices = new Set<Adapter>(ALL_ADAPTERS);
 
 async function runCli(
   args: readonly string[] = process.argv.slice(2),
-  surface: "package" | "global" = "package"
+  surface: CliSurface = "package"
 ): Promise<void> {
   if (surface === "global" && args.length === 0) {
     printGlobalHelp();
     return;
   }
 
-  const options = parseArgs(args);
+  const options = parseArgs(args, surface);
 
   if (options.help) {
-    surface === "global" ? printGlobalHelp() : printHelp();
+    printCommandHelp(options.command, surface);
     return;
   }
 
@@ -207,7 +214,7 @@ async function runCli(
   printOnboardingNextSteps(adapters, presentation);
 }
 
-function parseArgs(args: readonly string[]): CliOptions {
+function parseArgs(args: readonly string[], surface: CliSurface = "package"): CliOptions {
   const options: CliOptions = {
     adapters: null,
     command: "install",
@@ -319,7 +326,15 @@ function parseArgs(args: readonly string[]): CliOptions {
       continue;
     }
 
-    throw new Error(`Unknown option: ${arg}`);
+    if (!commandSeen && AI_SKILLS.has(arg)) {
+      throw new Error(
+        `\`${arg}\` is an AI chat skill, not a terminal command. Open your project in your AI tool and run \`$${arg}\` in Codex or \`/${arg}\` in Claude Code.`
+      );
+    }
+
+    const binary = surface === "global" ? "blueprint" : "npx create-ai-blueprint@latest";
+    const command = options.command === "install" ? "" : ` ${options.command}`;
+    throw new Error(`Unknown option: ${arg}\nRun \`${binary}${command} --help\` for usage.`);
   }
 
   if (allAdapters && adapterFlags.length > 0) {
@@ -1065,6 +1080,102 @@ async function waitForShutdown(): Promise<void> {
     process.once("SIGINT", stop);
     process.once("SIGTERM", stop);
   });
+}
+
+function printCommandHelp(command: CliOptions["command"], surface: CliSurface): void {
+  const binary = surface === "global" ? "blueprint" : "npx create-ai-blueprint@latest";
+
+  if (command === "status") {
+    console.log(`${binary} status
+
+Read Blueprint project status without changing project files.
+
+Usage:
+  ${binary} status [options]
+
+Options:
+  --json          Print status as one JSON object
+  --target, -t    Project directory, defaults to the current directory
+  --help, -h      Show status help
+  --version, -v   Show package version
+
+Examples:
+  ${binary} status
+  ${binary} status --json --target ./my-app`);
+    return;
+  }
+
+  if (command === "dashboard") {
+    console.log(`${binary} dashboard
+
+Serve the local, read-only Blueprint dashboard. Opens a browser by default.
+Press Ctrl+C to stop the server.
+
+Usage:
+  ${binary} dashboard [options]
+
+Options:
+  --target, -t    Project directory, defaults to the current directory
+  --no-open       Start without opening a browser
+  --help, -h      Show dashboard help
+  --version, -v   Show package version
+
+Examples:
+  ${binary} dashboard
+  ${binary} dashboard --no-open --target ./my-app`);
+    return;
+  }
+
+  if (command === "update" && surface === "global") {
+    console.log(`blueprint update
+
+The global blueprint command does not install or update Blueprint.
+Use the installer to update your project:
+  npx create-ai-blueprint@latest update
+  npx create-ai-blueprint@latest update --help`);
+    return;
+  }
+
+  if (command === "update") {
+    printUpdateHelp();
+    return;
+  }
+
+  surface === "global" ? printGlobalHelp() : printHelp();
+}
+
+function printUpdateHelp(): void {
+  console.log(`create-ai-blueprint update
+
+Update managed Blueprint files while preserving project-owned plans and rules.
+Adapter flags add to the installed set. To remove adapters, run interactively
+without adapter flags or --yes and deselect them in the checkbox.
+Non-interactive updates keep installed adapters unless flags add more.
+Modified managed files are conflicts: the update stops without writing unless you
+confirm replacement interactively or use --force. --force backs them up before
+replacing or removing them.
+
+Usage:
+  npx create-ai-blueprint@latest update [options]
+
+Options:
+  --codex          Add Codex to the installed adapters
+  --claude         Add Claude Code to the installed adapters
+  --copilot        Add GitHub Copilot to the installed adapters
+  --opencode       Add OpenCode to the installed adapters
+  --all            Add every supported adapter; do not combine with adapter flags
+  --both           Deprecated alias for --all
+  --target, -t     Project directory, defaults to the current directory
+  --force, -f      Back up and replace or remove conflicting managed files
+  --yes, -y        Skip prompts, keeping installed adapters unless flags add more
+  --dry-run        Preview file and adapter changes without writing files
+  --help, -h       Show update help
+  --version, -v    Show package version
+
+Examples:
+  npx create-ai-blueprint@latest update
+  npx create-ai-blueprint@latest update --codex --dry-run
+  npx create-ai-blueprint@latest update --target ./my-app --yes`);
 }
 
 function printHelp(): void {

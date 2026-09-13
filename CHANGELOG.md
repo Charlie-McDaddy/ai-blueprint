@@ -5,6 +5,12 @@ published `create-ai-blueprint` package.
 
 ## [Unreleased]
 
+### Added
+
+- Show command-specific CLI help for status, dashboard, and update. Mistaken
+  AI skill invocations now explain the Codex and Claude Code chat commands, and
+  unknown arguments point to the relevant help.
+
 ### Fixed
 
 - Warn in `/doctor` when existing `AGENTS.md` lacks substantive

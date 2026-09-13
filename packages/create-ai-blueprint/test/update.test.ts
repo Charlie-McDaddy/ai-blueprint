@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   ADAPTER_PROMPT,
@@ -30,6 +31,24 @@ import {
   readManifest,
   writeInstallManifest
 } from "../lib/update.js";
+
+test("CLI recovery recognizes every shipped AI skill without reading a project", async () => {
+  const skillsRoot = fileURLToPath(new URL("../../../.agents/skills/", import.meta.url));
+  const skills = await fs.readdir(skillsRoot, { withFileTypes: true });
+  for (const skill of skills.filter((entry) => entry.isDirectory())) {
+    if (skill.name === "status") {
+      assert.equal(parseArgs([skill.name]).command, "status");
+      continue;
+    }
+    assert.throws(() => parseArgs([skill.name]), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.ok(error.message.includes(`\`$${skill.name}\` in Codex`));
+      assert.ok(error.message.includes(`\`/${skill.name}\` in Claude Code`));
+      return true;
+    });
+  }
+  assert.equal(parseArgs(["status", "--target", "doctor"]).target, "doctor");
+});
 
 test("parseArgs supports install and update modes", () => {
   assert.equal(

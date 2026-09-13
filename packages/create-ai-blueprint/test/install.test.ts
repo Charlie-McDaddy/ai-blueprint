@@ -19,17 +19,20 @@ const templateFiles = {
 };
 let workspace: string;
 let fixturePackage: string;
+let fixtureWithoutTemplate: string;
 
 before(async () => {
   workspace = await fs.mkdtemp(path.join(os.tmpdir(), "blueprint-install-test-"));
   fixturePackage = path.join(workspace, "package");
-  await fs.mkdir(fixturePackage);
+  fixtureWithoutTemplate = path.join(workspace, "package-without-template");
 
-  for (const entry of ["bin", "lib", "package.json"]) {
-    await fs.cp(path.join(packageRoot, entry), path.join(fixturePackage, entry), { recursive: true });
+  for (const destination of [fixturePackage, fixtureWithoutTemplate]) {
+    await fs.mkdir(destination);
+    for (const entry of ["bin", "lib", "package.json"]) {
+      await fs.cp(path.join(packageRoot, entry), path.join(destination, entry), { recursive: true });
+    }
+    await fs.symlink(path.join(repoRoot, "node_modules"), path.join(destination, "node_modules"), "junction");
   }
-
-  await fs.symlink(path.join(repoRoot, "node_modules"), path.join(fixturePackage, "node_modules"), "junction");
 
   for (const [relativePath, content] of Object.entries(templateFiles)) {
     await writeFile(path.join(fixturePackage, "template", relativePath), content);
@@ -40,6 +43,104 @@ after(async () => {
   if (workspace) {
     await fs.rm(workspace, { recursive: true, force: true });
   }
+});
+
+for (const binary of ["create-ai-blueprint", "blueprint"]) {
+  const invocation = binary === "blueprint" ? binary : "npx create-ai-blueprint@latest";
+
+  for (const command of ["status", "dashboard", "update"]) {
+    test(`${binary} ${command} help works without a template or project`, async () => {
+      const { root, target } = await createTarget();
+      const missingTarget = path.join(root, "missing-project");
+      for (const help of ["--help", "-h"]) {
+        const result = runWithoutTemplate(binary, command, help, "--target", missingTarget);
+
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(result.stderr, "");
+        assert.doesNotMatch(result.stdout, /Select AI tool adapters|Would copy:|Blueprint dashboard: http/);
+        if (command === "update") {
+          assert.match(result.stdout, /npx create-ai-blueprint@latest update --help|Show update help/);
+          if (binary === "blueprint") {
+            assert.match(result.stdout, /does not install or update Blueprint/);
+            assert.doesNotMatch(result.stdout, /--force|--codex/);
+          } else {
+            assert.match(result.stdout, /Adapter flags add to the installed set/);
+            assert.match(result.stdout, /remove adapters[\s\S]*deselect them/);
+            assert.match(result.stdout, /--dry-run[\s\S]*without writing files/);
+            assert.match(result.stdout, /--force backs them up/);
+          }
+        } else {
+          assert.ok(result.stdout.includes(`${invocation} ${command} [options]`));
+          assert.match(result.stdout, /--target, -t/);
+          assert.doesNotMatch(result.stdout, /--codex|--force|--dry-run/);
+          if (command === "status") {
+            assert.match(result.stdout, /--json/);
+            assert.doesNotMatch(result.stdout, /--no-open/);
+          } else {
+            assert.match(result.stdout, /--no-open/);
+            assert.doesNotMatch(result.stdout, /--json/);
+          }
+        }
+        await assertMissing(missingTarget);
+        assert.deepEqual(await fs.readdir(target), []);
+      }
+    });
+  }
+
+  test(`${binary} keeps top-level help and the dashboard alias`, () => {
+    const help = runWithoutTemplate(binary, "--help");
+    assert.equal(help.status, 0, help.stderr);
+    assert.match(help.stdout, binary === "blueprint" ? /does not install or update/ : /Install AI Blueprint into an already scaffolded app/);
+    const alias = runWithoutTemplate(binary, "ui", "--help");
+    assert.equal(alias.status, 0, alias.stderr);
+    assert.ok(alias.stdout.includes(`${invocation} dashboard [options]`));
+  });
+
+  test(`${binary} redirects mistaken AI skills without running or writing`, async () => {
+    const { target } = await createTarget();
+    for (const args of [["doctor"], ["doctor", "--help"], ["implement"]]) {
+      const result = runWithoutTemplate(binary, ...args, "--target", target);
+      assert.equal(result.status, 1, result.stderr);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /AI chat skill, not a terminal command/);
+      assert.ok(result.stderr.includes(`\`$${args[0]}\` in Codex`));
+      assert.ok(result.stderr.includes(`\`/${args[0]}\` in Claude Code`));
+    }
+    assert.deepEqual(await fs.readdir(target), []);
+  });
+
+  test(`${binary} unknown arguments point to the relevant help`, async () => {
+    const { target } = await createTarget();
+    for (const args of [["unknown"], ["--unknown"], ["status", "--unknown"], ["dashboard", "--unknown"], ["update", "--unknown"]]) {
+      const result = runWithoutTemplate(binary, ...args, "--target", target);
+      const command = args.length === 1 ? "" : ` ${args[0]}`;
+      assert.equal(result.status, 1, result.stderr);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /Unknown option:/);
+      assert.ok(result.stderr.includes(`\`${invocation}${command} --help\``));
+    }
+    assert.deepEqual(await fs.readdir(target), []);
+  });
+
+  test(`${binary} help preserves argument validation`, () => {
+    for (const args of [["status", "--force"], ["dashboard", "--json"], ["update", "--all", "--codex"]]) {
+      const result = runWithoutTemplate(binary, ...args, "--help");
+      assert.equal(result.status, 1, result.stderr);
+      assert.equal(result.stdout, "");
+      assert.doesNotMatch(result.stderr, /Installer template is missing/);
+    }
+  });
+}
+
+test("global install and update remain unavailable and leave the target untouched", async () => {
+  const { target } = await createTarget();
+  for (const command of ["init", "update"]) {
+    const result = runWithoutTemplate("blueprint", command, "--target", target, "--yes", "--force");
+    assert.equal(result.status, 1, result.stderr);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /Use `npx create-ai-blueprint@latest` to install Blueprint/);
+  }
+  assert.deepEqual(await fs.readdir(target), []);
 });
 
 const linkedDestinations = [
@@ -197,6 +298,16 @@ function runInstaller(target: string, ...flags: string[]) {
     path.join(fixturePackage, "bin/create-ai-blueprint.ts"),
     "--target", target, "--yes", ...flags
   ], { cwd: workspace, encoding: "utf8" });
+  assert.ifError(result.error);
+  return result;
+}
+
+function runWithoutTemplate(binary: string, ...args: string[]) {
+  const result = spawnSync(process.execPath, [
+    tsxCli,
+    path.join(fixtureWithoutTemplate, "bin", `${binary}.ts`),
+    ...args
+  ], { cwd: workspace, encoding: "utf8", timeout: 10_000 });
   assert.ifError(result.error);
   return result;
 }
