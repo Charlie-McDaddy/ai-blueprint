@@ -125,8 +125,8 @@ Apply configured regular gates:
 - Audit and independent review follow `qualityGates.regular`.
 - Check runs for `always`, for behavioral work under `when-behavioral`, or when
   explicitly requested.
-- Try guide runs for `always`, for user-facing work under `when-user-facing`, or
-  when explicitly requested.
+- `/check guide` follows `qualityGates.regular.tryGuide`: it runs for `always`,
+  for user-facing work under `when-user-facing`, or when explicitly requested.
 
 Do not start a dev server. When a required runtime check needs one, ask the user
 to start it. Build output does not prove visual, persisted-data, authenticated,
@@ -185,7 +185,7 @@ After the final packet, always offer these choices:
 
 The final walkthrough is available with either `workflow.stepReview` value and
 regardless of `workflow.checkpointCommits`. It is a read-only code tour, not the
-manual product-review path produced by `/try`, and it is not verification.
+manual product-review path produced by `/check guide`, and it is not verification.
 
 When the user chooses the walkthrough, begin with a short map of the completed
 feature, then follow the spec's build steps. For each step, explain its purpose,

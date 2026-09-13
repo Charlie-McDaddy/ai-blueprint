@@ -290,9 +290,9 @@ step into a full-project hardening pass. A broader cleanup remains a separate
 
 Apply `qualityGates.regular.tryGuide`:
 
-- `manual` - skip automatic generation; `/try` remains available when explicitly
-  requested.
-- `when-user-facing` - generate the `/try` guide when the change affects UI,
+- `manual` - skip automatic generation; `/check guide` remains available when
+  explicitly requested.
+- `when-user-facing` - run `/check guide` when the change affects UI,
   navigation, copy, a public API or CLI, output, or another workflow a person
   directly uses.
 - `always` - generate a guide for every work item.
@@ -314,7 +314,7 @@ a full audit report:
   skipped
 - independent-review target, selected reviewer and model, and receipt state
 - screenshots or output paths, when relevant
-- how to try it manually, or a pointer to `/try` for the full walkthrough
+- how to try it manually, or a pointer to `/check guide` for the full walkthrough
 - checkpoint commits created
 - self-review findings
 - targeted audit scope and findings, when the audit gate ran
@@ -324,12 +324,12 @@ a full audit report:
 - unresolved risks or skipped checks
 - exact next action
 
-If everything is green, the next action is usually: review the diff, run `/try`
+If everything is green, the next action is usually: review the diff, run `/check guide`
 if its gate was manual and a walkthrough is wanted, then `/complete`.
 
 Always offer a read-only walkthrough of the completed code after the packet.
 Follow the spec's build steps, explain the key files, symbols, flow, and
-non-obvious decisions, then offer a focused deep dive. Keep `/try` distinct as
+non-obvious decisions, then offer a focused deep dive. Keep `/check guide` distinct as
 the manual product-review path.
 
 If something failed, name the failing check and the next fix target.

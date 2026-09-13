@@ -71,7 +71,9 @@ a finding. Those approval and safety boundaries are not configurable.
 `qualityGates.regular` controls automatic audit, independent-review, check, and
 try-guide behavior for the normal workflow and Autopilot.
 `qualityGates.continuous` controls the same per-feature gates for Continuous
-Mode. Independent review defaults to `when-sensitive` in both workflows, while
+Mode. The existing `tryGuide` keys select `/check guide`, which generates
+instructions without performing verification or recording acceptance.
+Independent review defaults to `when-sensitive` in both workflows, while
 audit, check, and try guide default to `manual`. Sensitive or unusually broad
 work therefore selects independent review automatically; ordinary small work
 does not. Setting a workflow's independent review to `manual` disables that
@@ -144,8 +146,8 @@ Core skills:
 - `tests` - set up unit testing by default, or a repeatable browser harness with `tests browser`
 - `ci` - explicitly set up one project-specific Verify command and matching automatic GitHub checks, with an optional local pre-push hook
 - `implement` - build the current spec one small, reviewed step at a time
-- `check` - prove the current spec against the running app
-- `try` - read-only manual review guide: where to go, what to click, what to expect
+- `check` - prove the current spec against the running app, or use `check guide`
+  for a read-only manual review guide: where to go, what to click, what to expect
 - `audit` - branch-aware or full-project review across all concerns or a focused quality, security, performance, or tests lens; `audit independent current` prepares an immutable checkpoint for a fresh reviewer session or configured isolated reviewer child; records findings in `blueprint/context/findings.md` and independent receipts in `blueprint/context/review.md`, where blocking findings or stale review state stop `complete`
 - `rollback` - plan a safe reversal of a completed feature from its archive and exact git commit, with later-dependency review before code changes
 - `complete` - run the final safety pass, log features, fixes, or rollbacks under `blueprint/history/`, then merge with approval
@@ -191,9 +193,10 @@ Commands with meaningful progress or a durable handoff should write it when the
 state directory exists: `onboard`, `adopt`, `discovery`, `overview`, `feature`,
 `fix`, `rollback`, `implement`, `debug`, `check`, `audit`, `tests`,
 `ci`, `prototype`, `autopilot`, `continuous`, `complete`, and
-`release`. Short orientation commands such as `brief`, `try`, `status`, and
-`doctor` do not need activity state. Doctor's optional approved reset removes
-malformed activity instead of recording another run.
+`release`. Short orientation commands such as `brief`, `status`, and `doctor`
+do not write activity state. The `check guide` mode also never writes activity
+state; select the Check mode before any activity call. Doctor's optional
+approved reset removes malformed activity instead of recording another run.
 
 Writing the initial activity record is the first action of a tracked command,
 before project inspection, preflight, or other tool calls. This one generated

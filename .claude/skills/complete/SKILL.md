@@ -71,18 +71,19 @@ Use `qualityGates.regular` for this work item:
   when a done-when needs observed runtime behavior such as a click, request, CLI
   command, download, background job, or multi-screen flow; `always` runs for
   every work item.
-- **Try guide:** `manual` runs only when explicitly requested;
+- **Try guide (`qualityGates.regular.tryGuide`):** use `/check guide`.
+  `manual` runs only when explicitly requested;
   `when-user-facing` generates a guide when the change affects UI, navigation,
   copy, a public API or CLI, output, or another workflow a person directly uses;
   `always` generates one for every work item.
 
-Apply automatic gates in this order: `/check`, review, then `/try`. When
+Apply automatic gates in this order: `/check`, review, then `/check guide`. When
 independent review is selected, follow the independent execution flow below and
 continue only after a fresh reviewer writes a current passing receipt. Otherwise
 run `/audit current` when Audit is selected.
 Reuse adequate evidence produced during the current work item instead of
-repeating it. A required gate that cannot run is a blocker. `/try` only generates
-instructions for human review; never claim the user performed them. P0 and P1
+repeating it. A required gate that cannot run is a blocker. `/check guide` only
+generates instructions for human review; never claim the user performed them. P0 and P1
 finding blockers remain enforced regardless of these settings.
 
 ### Independent review execution
@@ -327,7 +328,7 @@ Then point the user at `/feature`, `/fix`, or `/rollback` for the next thing.
 Finish with a concise **How to try it** note for the completed work. For a
 rollback, explain how to confirm the removed behavior is gone and name one
 unaffected regression path. If the
-manual path is more than a couple of steps, tell the user to run `/try latest`;
+manual path is more than a couple of steps, tell the user to run `/check guide latest`;
 that command can read the archived feature after `current-feature.md` is reset.
 
 ## Rules

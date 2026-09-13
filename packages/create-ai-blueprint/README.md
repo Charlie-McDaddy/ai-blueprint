@@ -127,7 +127,7 @@ them:
 - `/brief` or `$brief` previews an upcoming build-plan feature before you spec
   it.
 - `/debug` or `$debug` investigates a failure without editing code.
-- `/audit` and `/try`, or their Codex `$` forms, add code review and a human
+- `/audit` and `/check guide`, or their Codex `$` forms, add code review and a human
   walkthrough. `/audit independent current` prepares an approved checkpoint for
   a selected fresh reviewer adapter and model, then records a staleness-checked
   receipt.
@@ -325,6 +325,19 @@ The standalone `/browser-tests` skill has been removed. Use `/tests browser` or
 `$tests browser` instead; `/tests` and `/tests unit` remain unit setup. Updates
 remove unchanged managed copies of the old skill and stop for conflicts on
 customized copies. Review old references in your preserved `AGENTS.md` too.
+
+### Manual guide migration
+
+The standalone `/try` skill has been removed. Use `/check guide` or
+`$check guide` instead. Use `/check guide latest` for the most recent completed
+work, or add a step, path, route, or command to scope the walkthrough. Default
+`/check` still verifies behavior; guide mode only explains how you can test it
+and never runs checks, writes activity or spec status, or records acceptance.
+
+CLI updates remove unchanged managed Try copies and report customized copies
+as conflicts. Update old references in your preserved `AGENTS.md` too. The
+`qualityGates.regular.tryGuide` and `qualityGates.continuous.tryGuide` settings
+keep their names and existing policies; they now generate `/check guide`.
 
 ## Opening the local dashboard
 

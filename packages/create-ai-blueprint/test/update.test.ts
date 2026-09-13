@@ -62,6 +62,18 @@ test("retired browser-tests CLI input points to consolidated AI chat commands", 
   }
 });
 
+test("retired try CLI input points to consolidated AI chat commands", () => {
+  for (const surface of ["global", "package"] as const) {
+    assert.throws(() => parseArgs(["try"], surface), (error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.match(error.message, /skill was removed/);
+      assert.ok(error.message.includes("`$check guide` in Codex"));
+      assert.ok(error.message.includes("`/check guide` in Claude Code"));
+      return true;
+    });
+  }
+});
+
 test("parseArgs supports install and update modes", () => {
   assert.equal(
     ADAPTER_PROMPT,
@@ -749,6 +761,68 @@ for (const customized of [false, true]) {
         assert.equal(await fs.readFile(path.join(targetDir, relative), "utf8"), "Customized browser setup\n");
       }
       assert.equal(await fs.readFile(path.join(targetDir, ".agents/skills/tests/SKILL.md"), "utf8"), "Old unit setup\n");
+    } else {
+      assert.equal(prepared.plan.conflicts.length, 0);
+      assert.deepEqual(prepared.plan.remove.map(({ path: file }) => file), retiredPaths);
+      const result = await applyPreparedUpdate(prepared);
+      assert.ok(result.backupDir);
+      for (const relative of retiredPaths) {
+        await assert.rejects(fs.access(path.join(targetDir, relative)), { code: "ENOENT" });
+        assert.equal(await fs.readFile(path.join(result.backupDir, "files", relative), "utf8"), oldFiles[relative]);
+      }
+      for (const [relative, content] of Object.entries(newFiles)) {
+        assert.equal(await fs.readFile(path.join(targetDir, relative), "utf8"), content);
+      }
+    }
+    assert.equal(await fs.readFile(path.join(targetDir, "AGENTS.md"), "utf8"), oldFiles["AGENTS.md"]);
+  });
+}
+
+for (const customized of [false, true]) {
+  test(`check guide ${customized ? "preserves customized" : "removes unchanged"} retired skills in both adapters`, async (t) => {
+    const workspace = await createWorkspace(t);
+    const oldTemplateRoot = path.join(workspace, "template-old");
+    const newTemplateRoot = path.join(workspace, "template-new");
+    const targetDir = path.join(workspace, "target");
+    const oldFiles: Record<string, string> = { "AGENTS.md": "Project-owned instructions\n" };
+    const newFiles: Record<string, string> = {};
+    const retiredPaths: string[] = [];
+    for (const adapter of [".agents", ".claude"]) {
+      const retired = `${adapter}/skills/try/SKILL.md`;
+      retiredPaths.push(retired);
+      oldFiles[retired] = "Old manual guide\n";
+      oldFiles[`${adapter}/skills/check/SKILL.md`] = "Old verification\n";
+      for (const file of ["SKILL.md", "reference/verify.md", "reference/guide.md"]) {
+        const relative = `${adapter}/skills/check/${file}`;
+        newFiles[relative] = await fs.readFile(
+          new URL(`../../../${relative}`, import.meta.url), "utf8"
+        );
+      }
+    }
+    await writeFiles(oldTemplateRoot, oldFiles);
+    await writeFiles(targetDir, oldFiles);
+    await writeInstallManifest({
+      targetDir, templateRoot: oldTemplateRoot, version: "1.0.0", adapters: ["codex", "claude"]
+    });
+    if (customized) {
+      await writeFiles(targetDir, Object.fromEntries(
+        retiredPaths.map((relative) => [relative, "Customized manual guide\n"])
+      ));
+    }
+    await writeFiles(newTemplateRoot, newFiles);
+    const prepared = await prepareUpdate({
+      targetDir, templateRoot: newTemplateRoot, version: "1.1.0"
+    });
+    if (customized) {
+      assert.deepEqual(
+        prepared.plan.conflicts.map(({ path: file, operation, reason }) => [file, operation, reason]),
+        retiredPaths.map((file) => [file, "remove", "obsolete managed file was modified locally"])
+      );
+      await assert.rejects(applyPreparedUpdate(prepared), /must be resolved or explicitly replaced/);
+      for (const relative of retiredPaths) {
+        assert.equal(await fs.readFile(path.join(targetDir, relative), "utf8"), "Customized manual guide\n");
+      }
+      assert.equal(await fs.readFile(path.join(targetDir, ".agents/skills/check/SKILL.md"), "utf8"), "Old verification\n");
     } else {
       assert.equal(prepared.plan.conflicts.length, 0);
       assert.deepEqual(prepared.plan.remove.map(({ path: file }) => file), retiredPaths);

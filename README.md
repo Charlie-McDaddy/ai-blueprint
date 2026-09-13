@@ -145,7 +145,7 @@ Other work enters the same control loop:
 - Use `fix` for a small unplanned change or confirmed bug.
 - Use `debug` first when the cause is unclear.
 - Use `rollback` to reverse a completed feature without erasing its history.
-- Use `try` when you want a human manual-review guide.
+- Use `check guide` when you want a human manual-review guide.
 
 Read [Core Workflow](https://ai-blueprint.dev/docs/core-workflow/) for the full
 lifecycle and command-specific behavior.
@@ -181,7 +181,7 @@ full tour and command options.
 | **/audit** | Review a branch or project, record findings, or run independent review. |
 | **/autopilot** | Combine one spec and build pass through configured gates. |
 | **/brief** | Preview an upcoming feature without changing project state. |
-| **/check** | Prove the current spec against the real application. |
+| **/check** | Verify real behavior, or generate a manual walkthrough with `/check guide`. |
 | **/ci** | Align one project Verify command with GitHub checks, plus an optional pre-push hook. |
 | **/complete** | Run final gates, archive the work, and request merge approval. |
 | **/continuous** | Complete reviewed build-plan items serially with local Git work. |
@@ -198,7 +198,6 @@ full tour and command options.
 | **/rollback** | Plan a history-preserving reversal of completed work. |
 | **/status** | Show progress, drift, blockers, and the suggested next action. |
 | **/tests** | Set up unit testing, or an optional browser harness with `/tests browser`. |
-| **/try** | Generate a human manual-review walkthrough. |
 
 Codex uses the matching `$skill` form. Other adapters use the invocation style
 shown during installation. Each command has a dedicated page in the
@@ -243,7 +242,7 @@ Blueprint separates several kinds of proof that are easy to blur together:
   tests, with focused lenses when needed.
 - **Independent Audit:** a fresh reviewer session or configured isolated
   reviewer child inspects an approved checkpoint using an exact adapter and model.
-- **Try guide:** a read-only manual walkthrough for human review.
+- **Try guide:** `/check guide` generates a read-only manual walkthrough for human review.
 
 Independent review records the target, permitted base, spec hash, requested and
 actual reviewer metadata, Check result, commands, evidence, findings, and
@@ -387,6 +386,19 @@ removes unchanged managed copies of the old skill. Locally customized copies
 are reported as conflicts and preserved until you resolve or explicitly replace
 them. Existing `AGENTS.md` is preserved, so update any old command references in
 your project instructions too.
+
+### Manual guide migration
+
+The standalone `/try` skill has been removed. Use `/check guide` or
+`$check guide` instead. Use `/check guide latest` for the most recent completed
+work, or add a step, path, route, or command to scope the walkthrough. Default
+`/check` still verifies behavior; guide mode only explains how you can test it
+and never runs checks, writes activity or spec status, or records acceptance.
+
+CLI updates remove unchanged managed Try copies and report customized copies
+as conflicts. Update old references in your preserved `AGENTS.md` too. The
+`qualityGates.regular.tryGuide` and `qualityGates.continuous.tryGuide` settings
+keep their names and existing policies; they now generate `/check guide`.
 
 ## Documentation
 

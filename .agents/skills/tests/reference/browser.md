@@ -42,8 +42,8 @@ has a deliberate safe convention.
 For browser extensions, use a persistent test browser context and load the built
 unpacked extension. Test an extension-owned page or content-script flow that the
 runner can reach. Browser toolbar UI, permission prompts, and other browser
-chrome may still require Check or Try evidence; do not claim those surfaces are
-automated when they are not.
+chrome may still require `/check` evidence or human review using `/check guide`;
+do not claim those surfaces are automated when they are not.
 
 ## Step 3 - present the setup
 

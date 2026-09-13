@@ -13,6 +13,12 @@ published `create-ai-blueprint` package.
 
 ### Changed
 
+- Consolidated manual walkthroughs into `/check guide`, including `latest` and
+  scoped guides. Guide mode stays read-only and never runs checks or records
+  acceptance; default `/check` retains behavioral verification. Removed the Try
+  skill, with safe update conflicts for customized copies. Existing `tryGuide`
+  configuration keys keep their behavior and now select Check's guide mode.
+
 - Consolidated browser test setup into `/tests browser` and `$tests browser`.
   `/tests` defaults to unit setup, with `/tests unit` as an explicit form. Only
   the selected setup reference is loaded. Removed the standalone browser-tests

@@ -533,6 +533,9 @@ async function validateInstall(
 
   if (expectsSharedSkills) {
     expectedPaths.push(
+      ".agents/skills/check/SKILL.md",
+      ".agents/skills/check/reference/verify.md",
+      ".agents/skills/check/reference/guide.md",
       ".agents/skills/tests/SKILL.md",
       ".agents/skills/tests/reference/unit.md",
       ".agents/skills/tests/reference/browser.md",
@@ -546,6 +549,9 @@ async function validateInstall(
   if (expectsClaude) {
     expectedPaths.push(
       "CLAUDE.md",
+      ".claude/skills/check/SKILL.md",
+      ".claude/skills/check/reference/verify.md",
+      ".claude/skills/check/reference/guide.md",
       ".claude/skills/tests/SKILL.md",
       ".claude/skills/tests/reference/unit.md",
       ".claude/skills/tests/reference/browser.md",
@@ -561,7 +567,9 @@ async function validateInstall(
   }
 
   await requireMissing(path.join(targetDir, ".agents/skills/browser-tests"));
+  await requireMissing(path.join(targetDir, ".agents/skills/try"));
   await requireMissing(path.join(targetDir, ".claude/skills/browser-tests"));
+  await requireMissing(path.join(targetDir, ".claude/skills/try"));
   await requireMissing(path.join(targetDir, "README.md"));
   await requireMissing(path.join(targetDir, "blueprint", "README.md"));
   await requireMissing(path.join(targetDir, ".ai-blueprint"));

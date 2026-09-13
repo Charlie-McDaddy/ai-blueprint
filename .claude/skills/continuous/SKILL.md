@@ -195,7 +195,8 @@ Use `qualityGates.continuous`, not the regular or Autopilot gates:
   when a done-when needs observed runtime behavior such as a click, request, CLI
   command, download, background job, or multi-screen flow; `always` checks
   every feature.
-- **Try guide:** `manual` skips automatic generation; `when-user-facing`
+- **Try guide (`qualityGates.continuous.tryGuide`):** use `/check guide`.
+  `manual` skips automatic generation; `when-user-facing`
   generates a guide for UI, navigation, copy, public API or CLI, output, or
   another workflow a person directly uses; `always` generates one for every
   feature.

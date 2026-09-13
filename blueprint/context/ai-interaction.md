@@ -74,9 +74,9 @@ when you just want something done.
    section of `coding-standards.md` for the gates.
    Run `/ci` separately when you want one Verify command and matching automatic
    GitHub checks; CI setup is not part of this feature loop.
-6. **Try manually (optional)** - Run `/try` when you want a human walkthrough:
+6. **Try manually (optional)** - Run `/check guide` when you want a human walkthrough:
    what to start, where to go, what to click or run, what to expect, and what
-   would count as wrong. `/check` proves behavior from the agent side; `/try`
+   would count as wrong. `/check` proves behavior from the agent side; `/check guide`
    gives you the manual review path.
 7. **Audit (optional)** - Run `/audit` when you want a read-only code quality pass
    before closing a feature or after a larger automated run. It checks for
@@ -108,7 +108,7 @@ when you just want something done.
    checks run, manual try path, risks, and next action. The per-step walkthrough
    is part of the Guided checkpoint prompt. The final code walkthrough is always
    available and is separate from the manual product-review path produced by
-   `/try`.
+   `/check guide`.
 
 `workflow.stepReview: "every"` restores per-step approval pauses but does not
 enable checkpoint prompts by itself. The previous workflow uses

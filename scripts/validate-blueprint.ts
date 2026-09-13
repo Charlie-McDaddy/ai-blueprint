@@ -407,6 +407,36 @@ async function validateVerificationContract(): Promise<void> {
       ]
     ],
     [
+      ".agents/skills/check/SKILL.md",
+      [
+        "Select the mode before any tool call",
+        "reference/guide.md",
+        "reference/verify.md",
+        "Load only the selected reference",
+        "Guide generation never satisfies a verification gate",
+        "`qualityGates.regular.tryGuide` and `qualityGates.continuous.tryGuide`"
+      ]
+    ],
+    [
+      ".agents/skills/check/reference/guide.md",
+      [
+        "Do not edit files, write activity state, update spec",
+        "run checks or the app",
+        "A guide\nnever counts as acceptance evidence",
+        "For `latest`, use the most recent archive even when an active spec exists",
+        "explicitly route to `/check`"
+      ]
+    ],
+    [
+      ".agents/skills/check/reference/verify.md",
+      [
+        "Verification activity was started by the dispatcher",
+        "verification failed",
+        "verification incomplete",
+        "Every `pass` is backed by something observed"
+      ]
+    ],
+    [
       ".agents/skills/tests/SKILL.md",
       [
         "reference/unit.md",
