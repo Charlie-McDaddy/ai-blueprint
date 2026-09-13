@@ -3,7 +3,7 @@
 Notable changes to AI Blueprint are documented here. Release dates reflect the
 published `create-ai-blueprint` package.
 
-## [Unreleased]
+## [1.9.0] - 2026-09-13
 
 ### Added
 
