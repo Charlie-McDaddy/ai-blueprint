@@ -25,9 +25,23 @@ boundaries.
 Requires Node.js 22 or newer. Run the installer from an application that has
 already been scaffolded and initialized as a Git repository.
 
+Choose the command for your project's package manager:
+
 ```bash
+# npm
 npx create-ai-blueprint@latest
+
+# pnpm
+pnpm dlx create-ai-blueprint@latest
 ```
+
+A project that enforces pnpm through `devEngines.packageManager` can reject
+`npx` with `EBADDEVENGINES` before Blueprint starts. Use `pnpm dlx` in that
+project; do not remove its package-manager requirement.
+
+The remaining `npx create-ai-blueprint@latest` examples also work with
+`pnpm dlx create-ai-blueprint@latest`, keeping the same command and options.
+
 
 You can also use npm's initializer form:
 
@@ -220,13 +234,21 @@ for the full reference.
 Preview the update plan:
 
 ```bash
+# npm
 npx create-ai-blueprint@latest update --dry-run
+
+# pnpm
+pnpm dlx create-ai-blueprint@latest update --dry-run
 ```
 
 Apply the update:
 
 ```bash
+# npm
 npx create-ai-blueprint@latest update
+
+# pnpm
+pnpm dlx create-ai-blueprint@latest update
 ```
 
 The updater detects the installed adapters and manages only these paths:
@@ -340,6 +362,28 @@ stored under `blueprint/.state/backups/` and ignored by git.
 The first update of a legacy install creates the manifest. Files that already
 match the current package are adopted automatically. Differing files remain
 conflicts so local changes are not lost.
+
+### If latest runs an older version
+
+Check the version printed in the update plan before proceeding. A cached
+package resolution can run an older release even when the command uses
+`@latest`. Pin the intended published version explicitly. For example, for
+1.9.0:
+
+```bash
+# npm
+npx create-ai-blueprint@1.9.0 update
+
+# pnpm
+pnpm dlx create-ai-blueprint@1.9.0 update
+```
+
+Use the version from the [release list](https://github.com/aiblueprinthq/ai-blueprint/releases)
+when following this example after a newer release. The interactive adapter
+picker was introduced in 1.8.0. Run without adapter flags or `--yes` in an
+interactive terminal to select adapters. If an older updater offers to replace
+a newer global CLI with an older version, answer **No** and rerun the intended
+version.
 
 ## Checking project status
 

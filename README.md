@@ -84,8 +84,25 @@ scaffolder did not, then install Blueprint:
 npx create-next-app@latest my-app
 cd my-app
 git init
-npx create-ai-blueprint@latest
 ```
+
+Choose the command for your project's package manager:
+
+```bash
+# npm
+npx create-ai-blueprint@latest
+
+# pnpm
+pnpm dlx create-ai-blueprint@latest
+```
+
+A project that enforces pnpm through `devEngines.packageManager` can reject
+`npx` with `EBADDEVENGINES` before Blueprint starts. Use `pnpm dlx` in that
+project; do not remove its package-manager requirement.
+
+The remaining `npx create-ai-blueprint@latest` examples also work with
+`pnpm dlx create-ai-blueprint@latest`, keeping the same command and options.
+
 
 Next:
 
@@ -403,8 +420,17 @@ npx create-ai-blueprint@latest status
 Preview and apply managed workflow updates:
 
 ```bash
+# npm
 npx create-ai-blueprint@latest update --dry-run
+
+# pnpm
+pnpm dlx create-ai-blueprint@latest update --dry-run
+
+# npm
 npx create-ai-blueprint@latest update
+
+# pnpm
+pnpm dlx create-ai-blueprint@latest update
 ```
 
 Update can also add an adapter to an existing installation:
@@ -438,6 +464,28 @@ preserving them until you resolve or explicitly replace them. Review old referen
 project instructions. The `qualityGates.regular.tryGuide` and
 `qualityGates.continuous.tryGuide` keys keep their names and policies and now
 select `/check guide`. No configuration migration is needed.
+
+### If latest runs an older version
+
+Check the version printed in the update plan before proceeding. A cached
+package resolution can run an older release even when the command uses
+`@latest`. Pin the intended published version explicitly. For example, for
+1.9.0:
+
+```bash
+# npm
+npx create-ai-blueprint@1.9.0 update
+
+# pnpm
+pnpm dlx create-ai-blueprint@1.9.0 update
+```
+
+Use the version from the [release list](https://github.com/aiblueprinthq/ai-blueprint/releases)
+when following this example after a newer release. The interactive adapter
+picker was introduced in 1.8.0. Run without adapter flags or `--yes` in an
+interactive terminal to select adapters. If an older updater offers to replace
+a newer global CLI with an older version, answer **No** and rerun the intended
+version.
 
 ## Documentation
 
